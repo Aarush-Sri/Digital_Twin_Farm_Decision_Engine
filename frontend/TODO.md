@@ -10,7 +10,9 @@
 - [x] Build interactive FarmCanvas drop-zone with coordinates & grid backdrop
 - [x] Build FarmItem with smooth spring animations (`framer-motion`)
 - [x] Implement on-canvas 8-point resize handles & interactive dimension controls
-- [x] Implement floating DimensionBadge toolbar for active piece (W/H inputs, aspect ratio toggle, delete)
-- [x] Add unit test suite for reducer, canvas, and resize interactions
-- [x] Verify test suite passing (16/16 tests passing, 100% pass rate)
-- [x] Launch Vite development server and host locally at `http://localhost:5173/`
+- [x] Implement floating DimensionBadge toolbar for active piece
+- [x] Fix dimension extension & resize handler payload mismatch
+- [x] Realistic scale system: 1m = 40px (Tree 1×1m, Crops/Grass 2×2m, Fence thin & long, Water canal)
+- [x] Overlaying hierarchy logic: Fence sits above Water; Water can never cover Fence
+- [x] Unit test suite (17/17 passing, 100% pass rate)
+- [x] Live Vite dev server running at `http://localhost:5173/`
