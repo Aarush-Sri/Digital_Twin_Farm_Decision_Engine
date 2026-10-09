@@ -1,7 +1,10 @@
 /**
- * Farm Item Definitions and Configuration
- * Provides metadata, intuitive colors, default sizing, and iconography.
+ * Farm Item Definitions, Realistic Dimensions, Layer Hierarchy & Scale Configuration
+ * Scale: 40 pixels = 1.0 meter (20px grid snap = 0.5m step)
  */
+
+export const PIXELS_PER_METER = 40;
+export const GRID_SIZE = 20; // 0.5m grid snap
 
 export const ITEM_TYPES = {
   GRASS: 'grass',
@@ -12,17 +15,54 @@ export const ITEM_TYPES = {
   CARROT: 'carrot',
 };
 
+/**
+ * Overlaying Layer Priority Logic:
+ * Tier 1: Grass (Base terrain ground)
+ * Tier 2: Water (Canals/ponds - sits on grass)
+ * Tier 3: Wheat / Carrot (Crops - planted on land)
+ * Tier 4: Tree (Flora - upright foliage)
+ * Tier 5: Fence (Structures - crosses over water/land, water CANNOT cover fence)
+ */
+export const ITEM_LAYER_PRIORITY = {
+  [ITEM_TYPES.GRASS]: 1,
+  [ITEM_TYPES.WATER]: 2,
+  [ITEM_TYPES.WHEAT]: 3,
+  [ITEM_TYPES.CARROT]: 3,
+  [ITEM_TYPES.TREE]: 4,
+  [ITEM_TYPES.FENCE]: 5,
+};
+
+export const calculateZIndex = (type, subIndex = 0) => {
+  const priority = ITEM_LAYER_PRIORITY[type] || 1;
+  return priority * 1000 + (subIndex % 900);
+};
+
+export const pxToMeters = (px) => {
+  const m = px / PIXELS_PER_METER;
+  return Number.isInteger(m) ? `${m}m` : `${m.toFixed(1)}m`;
+};
+
+export const pxToMetersNum = (px) => {
+  return Number((px / PIXELS_PER_METER).toFixed(1));
+};
+
+export const metersToPx = (m) => {
+  return Math.round(Number(m) * PIXELS_PER_METER);
+};
+
 export const FARM_ITEMS = [
   {
     type: ITEM_TYPES.GRASS,
     label: 'Grass Plot',
     category: 'Terrain',
-    description: 'Fertile turf for grazing and foundation',
+    description: 'Fertile turf foundation',
     iconName: 'Sprout',
-    defaultWidth: 140,
-    defaultHeight: 140,
-    minWidth: 60,
-    minHeight: 60,
+    layerPriority: ITEM_LAYER_PRIORITY[ITEM_TYPES.GRASS],
+    // 2m x 2m default scale
+    defaultWidth: 80,
+    defaultHeight: 80,
+    minWidth: 20, // 0.5m
+    minHeight: 20, // 0.5m
     color: {
       bg: '#064e3b',
       border: '#059669',
@@ -35,12 +75,14 @@ export const FARM_ITEMS = [
     type: ITEM_TYPES.TREE,
     label: 'Orchard Tree',
     category: 'Flora',
-    description: 'Mature fruit-bearing orchard timber',
+    description: '1x1 mature fruit-bearing tree',
     iconName: 'Trees',
-    defaultWidth: 120,
-    defaultHeight: 160,
-    minWidth: 60,
-    minHeight: 80,
+    layerPriority: ITEM_LAYER_PRIORITY[ITEM_TYPES.TREE],
+    // 1m x 1m square default
+    defaultWidth: 40,
+    defaultHeight: 40,
+    minWidth: 20, // 0.5m
+    minHeight: 20, // 0.5m
     color: {
       bg: '#14532d',
       border: '#15803d',
@@ -53,12 +95,14 @@ export const FARM_ITEMS = [
     type: ITEM_TYPES.FENCE,
     label: 'Wood Fence',
     category: 'Structure',
-    description: 'Protective perimeter boundary',
+    description: 'Thin and long boundary (crosses water & land)',
     iconName: 'Fence',
+    layerPriority: ITEM_LAYER_PRIORITY[ITEM_TYPES.FENCE],
+    // Thin and long default (0.4m x 4.0m)
     defaultWidth: 160,
-    defaultHeight: 48,
-    minWidth: 80,
-    minHeight: 32,
+    defaultHeight: 16,
+    minWidth: 12, // thin capability
+    minHeight: 12,
     color: {
       bg: '#451a03',
       border: '#92400e',
@@ -71,12 +115,14 @@ export const FARM_ITEMS = [
     type: ITEM_TYPES.WATER,
     label: 'Water Canal',
     category: 'Irrigation',
-    description: 'Fresh reservoir supply for crops',
+    description: 'Fresh reservoir (stays below fences)',
     iconName: 'Waves',
-    defaultWidth: 180,
-    defaultHeight: 120,
-    minWidth: 70,
-    minHeight: 60,
+    layerPriority: ITEM_LAYER_PRIORITY[ITEM_TYPES.WATER],
+    // 3m x 2m default water body
+    defaultWidth: 120,
+    defaultHeight: 80,
+    minWidth: 40, // 1m
+    minHeight: 40, // 1m
     color: {
       bg: '#0c4a6e',
       border: '#0284c7',
@@ -89,12 +135,14 @@ export const FARM_ITEMS = [
     type: ITEM_TYPES.WHEAT,
     label: 'Wheat Crop',
     category: 'Crops',
-    description: 'Golden staple harvest field',
+    description: '2mx2m golden harvest field',
     iconName: 'Wheat',
-    defaultWidth: 130,
-    defaultHeight: 130,
-    minWidth: 60,
-    minHeight: 60,
+    layerPriority: ITEM_LAYER_PRIORITY[ITEM_TYPES.WHEAT],
+    // 2m x 2m default scale
+    defaultWidth: 80,
+    defaultHeight: 80,
+    minWidth: 20, // 0.5m
+    minHeight: 20, // 0.5m
     color: {
       bg: '#713f12',
       border: '#ca8a04',
@@ -107,12 +155,14 @@ export const FARM_ITEMS = [
     type: ITEM_TYPES.CARROT,
     label: 'Carrot Patch',
     category: 'Vegetables',
-    description: 'High-yield root crop bed',
+    description: '2mx2m root crop bed',
     iconName: 'Carrot',
-    defaultWidth: 120,
-    defaultHeight: 120,
-    minWidth: 60,
-    minHeight: 60,
+    layerPriority: ITEM_LAYER_PRIORITY[ITEM_TYPES.CARROT],
+    // 2m x 2m default scale
+    defaultWidth: 80,
+    defaultHeight: 80,
+    minWidth: 20, // 0.5m
+    minHeight: 20, // 0.5m
     color: {
       bg: '#7c2d12',
       border: '#ea580c',
@@ -126,5 +176,3 @@ export const FARM_ITEMS = [
 export const getItemDefinition = (type) => {
   return FARM_ITEMS.find((item) => item.type === type) || FARM_ITEMS[0];
 };
-
-export const GRID_SIZE = 20; // 20px grid snap step

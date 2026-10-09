@@ -15,11 +15,18 @@ export const FarmProvider = ({ children }) => {
     dispatch({ type: ACTION_TYPES.UPDATE_POSITION, payload: { id, x, y } });
   }, []);
 
-  const updateDimensions = useCallback((id, width, height, x, y) => {
-    dispatch({
-      type: ACTION_TYPES.UPDATE_DIMENSIONS,
-      payload: { id, width, height, x, y },
-    });
+  const updateDimensions = useCallback((arg1, width, height, x, y) => {
+    if (typeof arg1 === 'object' && arg1 !== null) {
+      dispatch({
+        type: ACTION_TYPES.UPDATE_DIMENSIONS,
+        payload: arg1,
+      });
+    } else {
+      dispatch({
+        type: ACTION_TYPES.UPDATE_DIMENSIONS,
+        payload: { id: arg1, width, height, x, y },
+      });
+    }
   }, []);
 
   const selectItem = useCallback((id) => {

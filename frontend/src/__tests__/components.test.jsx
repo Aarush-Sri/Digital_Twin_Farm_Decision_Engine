@@ -88,13 +88,13 @@ describe('Farm UI Components', () => {
       />
     );
 
-    // Click 2:1 preset
-    const presetBtn = screen.getByText('2:1');
+    // Click 2×2m preset
+    const presetBtn = screen.getByText('2×2m');
     fireEvent.click(presetBtn);
     expect(mockUpdateDimensions).toHaveBeenCalledWith({
       id: 'test-item',
-      width: 200,
-      height: 100,
+      width: 80,
+      height: 80,
     });
 
     // Click delete

@@ -10,6 +10,8 @@ import {
   Plus
 } from 'lucide-react';
 
+import { pxToMeters } from '../../types/farm';
+
 const ICON_MAP = {
   Sprout,
   Trees,
@@ -78,7 +80,7 @@ export const PaletteCard = ({ itemDef, onQuickAdd }) => {
       </p>
 
       <div className="flex items-center justify-between pt-2 border-t border-zinc-800/60 text-[10px] text-zinc-500 font-mono">
-        <span>Default {itemDef.defaultWidth} × {itemDef.defaultHeight}px</span>
+        <span>Default {pxToMeters(itemDef.defaultWidth)} × {pxToMeters(itemDef.defaultHeight)}</span>
         <span 
           className="w-2 h-2 rounded-full" 
           style={{ backgroundColor: itemDef.color.accent }}

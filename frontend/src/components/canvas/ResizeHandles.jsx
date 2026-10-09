@@ -20,9 +20,20 @@ export const ResizeHandles = ({ onStartResize, activeHandle }) => {
           <div
             key={id}
             data-testid={`resize-handle-${id}`}
-            onMouseDown={(e) => onStartResize(e, id)}
-            onTouchStart={(e) => onStartResize(e, id)}
-            className={`absolute z-30 w-3 h-3 rounded-full border border-zinc-950 bg-white hover:bg-emerald-400 hover:scale-125 transition-transform duration-100 ${cursor} ${position} shadow-md ${
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onStartResize(e, id);
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onStartResize(e, id);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              onStartResize(e, id);
+            }}
+            style={{ touchAction: 'none' }}
+            className={`absolute z-50 w-3 h-3 rounded-full border border-zinc-950 bg-white hover:bg-emerald-400 hover:scale-125 transition-transform duration-100 ${cursor} ${position} shadow-md ${
               isActive ? 'scale-125 bg-emerald-400 ring-2 ring-emerald-500' : ''
             }`}
           />

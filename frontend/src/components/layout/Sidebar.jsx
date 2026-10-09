@@ -1,5 +1,4 @@
-import React from 'react';
-import { FARM_ITEMS } from '../../types/farm';
+import { FARM_ITEMS, pxToMeters } from '../../types/farm';
 import { PaletteCard } from '../palette/PaletteCard';
 import { useFarm } from '../../hooks/useFarm';
 import { Layers, MousePointerClick, Sparkles } from 'lucide-react';
@@ -41,7 +40,7 @@ export const Sidebar = () => {
           </span>
         </div>
         <p className="mt-1 text-xs text-zinc-400">
-          Drag and drop elements to design your land layout.
+          Realistic scale: 1m=40px • Tree 1×1m • Crops 2×2m
         </p>
       </div>
 
@@ -60,17 +59,17 @@ export const Sidebar = () => {
       <div className="p-4 border-t border-zinc-800/80 bg-zinc-900/30 text-[11px] text-zinc-400 space-y-2">
         <div className="flex items-start space-x-2">
           <MousePointerClick className="w-3.5 h-3.5 text-zinc-400 mt-0.5 flex-shrink-0" />
-          <span>Click any placed piece to unlock 8-point interactive resize handles.</span>
+          <span>Click any piece to drag 8-point handles or adjust meter dimensions.</span>
         </div>
         <div className="flex items-start space-x-2">
           <Sparkles className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
-          <span>Smooth spring animations provide physical drag & drop feedback.</span>
+          <span>Layer hierarchy ensures fences always sit on top of water bodies.</span>
         </div>
 
         {selectedItem && (
           <div className="mt-2 pt-2 border-t border-zinc-800 flex items-center justify-between font-mono text-[10px] text-emerald-400">
             <span className="truncate">Selected: {selectedItem.type.toUpperCase()}</span>
-            <span>{selectedItem.width} × {selectedItem.height}px</span>
+            <span>{pxToMeters(selectedItem.width)} × {pxToMeters(selectedItem.height)}</span>
           </div>
         )}
       </div>

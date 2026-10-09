@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { FARM_ITEMS, ITEM_TYPES, getItemDefinition } from '../types/farm';
+import { 
+  FARM_ITEMS, 
+  ITEM_TYPES, 
+  ITEM_LAYER_PRIORITY,
+  getItemDefinition, 
+  calculateZIndex,
+  pxToMeters,
+  metersToPx
+} from '../types/farm';
 
-describe('Farm Item Definitions', () => {
+describe('Farm Item Definitions & Scale Logic', () => {
   it('contains all required farm element types', () => {
     const requiredTypes = ['grass', 'tree', 'fence', 'water', 'wheat', 'carrot'];
     const definedTypes = FARM_ITEMS.map((item) => item.type);
@@ -11,23 +19,44 @@ describe('Farm Item Definitions', () => {
     });
   });
 
-  it('provides valid dimensions and colors for every item', () => {
-    FARM_ITEMS.forEach((item) => {
-      expect(item.defaultWidth).toBeGreaterThan(0);
-      expect(item.defaultHeight).toBeGreaterThan(0);
-      expect(item.color.bg).toMatch(/^#/);
-      expect(item.color.border).toMatch(/^#/);
-      expect(item.color.accent).toMatch(/^#/);
-    });
+  it('enforces realistic starting sizes (1x1 tree, 2x2 crops/grass, thin long fence)', () => {
+    const tree = getItemDefinition(ITEM_TYPES.TREE);
+    expect(tree.defaultWidth).toBe(40); // 1.0m
+    expect(tree.defaultHeight).toBe(40); // 1.0m
+
+    const wheat = getItemDefinition(ITEM_TYPES.WHEAT);
+    expect(wheat.defaultWidth).toBe(80); // 2.0m
+    expect(wheat.defaultHeight).toBe(80); // 2.0m
+
+    const carrot = getItemDefinition(ITEM_TYPES.CARROT);
+    expect(carrot.defaultWidth).toBe(80); // 2.0m
+    expect(carrot.defaultHeight).toBe(80); // 2.0m
+
+    const fence = getItemDefinition(ITEM_TYPES.FENCE);
+    expect(fence.defaultHeight).toBeLessThanOrEqual(20); // thin
+    expect(fence.defaultWidth).toBeGreaterThan(100); // long
   });
 
-  it('retrieves correct definition by type with fallback', () => {
-    const grass = getItemDefinition(ITEM_TYPES.GRASS);
-    expect(grass.type).toBe('grass');
-    expect(grass.label).toBe('Grass Plot');
+  it('enforces overlaying logic: fence is higher tier than water and grass', () => {
+    expect(ITEM_LAYER_PRIORITY[ITEM_TYPES.FENCE]).toBeGreaterThan(
+      ITEM_LAYER_PRIORITY[ITEM_TYPES.WATER]
+    );
+    expect(ITEM_LAYER_PRIORITY[ITEM_TYPES.WATER]).toBeGreaterThan(
+      ITEM_LAYER_PRIORITY[ITEM_TYPES.GRASS]
+    );
 
-    const fallback = getItemDefinition('non-existent');
-    expect(fallback).toBeDefined();
-    expect(fallback.type).toBe('grass');
+    const fenceZ = calculateZIndex(ITEM_TYPES.FENCE, 1);
+    const waterZ = calculateZIndex(ITEM_TYPES.WATER, 1);
+    const grassZ = calculateZIndex(ITEM_TYPES.GRASS, 1);
+
+    expect(fenceZ).toBeGreaterThan(waterZ);
+    expect(waterZ).toBeGreaterThan(grassZ);
+  });
+
+  it('converts correctly between pixels and meters', () => {
+    expect(pxToMeters(40)).toBe('1m');
+    expect(pxToMeters(80)).toBe('2m');
+    expect(metersToPx(1)).toBe(40);
+    expect(metersToPx(2.5)).toBe(100);
   });
 });

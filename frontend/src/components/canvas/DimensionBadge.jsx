@@ -1,107 +1,186 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, BringToFront, Check, RefreshCw } from 'lucide-react';
+import { Trash2, BringToFront, Plus, Minus, Move } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { 
+  PIXELS_PER_METER, 
+  pxToMetersNum, 
+  metersToPx, 
+  GRID_SIZE,
+  getItemDefinition 
+} from '../../types/farm';
 
 export const DimensionBadge = ({ item, onUpdateDimensions, onDelete, onBringToFront }) => {
-  const [widthInput, setWidthInput] = useState(item.width);
-  const [heightInput, setHeightInput] = useState(item.height);
+  const itemDef = getItemDefinition(item.type);
+  const [meterWidth, setMeterWidth] = useState(pxToMetersNum(item.width));
+  const [meterHeight, setMeterHeight] = useState(pxToMetersNum(item.height));
 
   useEffect(() => {
-    setWidthInput(item.width);
-    setHeightInput(item.height);
+    setMeterWidth(pxToMetersNum(item.width));
+    setMeterHeight(pxToMetersNum(item.height));
   }, [item.width, item.height]);
 
-  const handleApplyDimensions = (e) => {
-    if (e) e.preventDefault();
-    const w = parseInt(widthInput, 10);
-    const h = parseInt(heightInput, 10);
-    if (!isNaN(w) && !isNaN(h) && w > 0 && h > 0) {
-      onUpdateDimensions({
-        id: item.id,
-        width: Math.max(item.minWidth || 40, w),
-        height: Math.max(item.minHeight || 30, h),
-      });
-    }
-  };
+  const applyMeters = (newW_m, newH_m) => {
+    const wPx = Math.max(item.minWidth || itemDef.minWidth || 12, metersToPx(newW_m));
+    const hPx = Math.max(item.minHeight || itemDef.minHeight || 12, metersToPx(newH_m));
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      handleApplyDimensions();
-    }
-  };
+    setMeterWidth(pxToMetersNum(wPx));
+    setMeterHeight(pxToMetersNum(hPx));
 
-  const setPreset = (w, h) => {
     onUpdateDimensions({
       id: item.id,
-      width: w,
-      height: h,
+      width: wPx,
+      height: hPx,
     });
+  };
+
+  const handleWidthChange = (e) => {
+    const val = parseFloat(e.target.value);
+    setMeterWidth(e.target.value);
+    if (!isNaN(val) && val > 0) {
+      applyMeters(val, meterHeight);
+    }
+  };
+
+  const handleHeightChange = (e) => {
+    const val = parseFloat(e.target.value);
+    setMeterHeight(e.target.value);
+    if (!isNaN(val) && val > 0) {
+      applyMeters(meterWidth, val);
+    }
+  };
+
+  const adjustWidth = (deltaM) => {
+    const current = pxToMetersNum(item.width);
+    const updated = Math.max(0.3, +(current + deltaM).toFixed(1));
+    applyMeters(updated, pxToMetersNum(item.height));
+  };
+
+  const adjustHeight = (deltaM) => {
+    const current = pxToMetersNum(item.height);
+    const updated = Math.max(0.3, +(current + deltaM).toFixed(1));
+    applyMeters(pxToMetersNum(item.width), updated);
+  };
+
+  const setMeterPreset = (w_m, h_m) => {
+    applyMeters(w_m, h_m);
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+      initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 4, scale: 0.95 }}
+      exit={{ opacity: 0, y: 6, scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+      onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
-      className="absolute -top-14 left-1/2 -translate-x-1/2 z-40 flex items-center space-x-2 bg-zinc-900/95 backdrop-blur-md px-3 py-1.5 rounded-lg border border-zinc-700/80 shadow-2xl text-xs select-none"
+      className="absolute -top-16 left-1/2 -translate-x-1/2 z-[9999] flex items-center space-x-2 bg-zinc-900/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-zinc-700/80 shadow-2xl text-xs select-none pointer-events-auto"
     >
-      {/* Dimension Inputs */}
-      <div className="flex items-center space-x-1 font-mono text-[11px]">
-        <span className="text-zinc-500 font-semibold">W</span>
-        <input
-          type="number"
-          min={item.minWidth || 40}
-          max={1200}
-          step={20}
-          value={widthInput}
-          onChange={(e) => setWidthInput(e.target.value)}
-          onBlur={handleApplyDimensions}
-          onKeyDown={handleKeyDown}
-          className="w-14 bg-zinc-950 border border-zinc-800 rounded px-1.5 py-0.5 text-zinc-100 text-center focus:outline-none focus:border-emerald-500"
-        />
-        <span className="text-zinc-500">×</span>
-        <span className="text-zinc-500 font-semibold">H</span>
-        <input
-          type="number"
-          min={item.minHeight || 30}
-          max={1200}
-          step={20}
-          value={heightInput}
-          onChange={(e) => setHeightInput(e.target.value)}
-          onBlur={handleApplyDimensions}
-          onKeyDown={handleKeyDown}
-          className="w-14 bg-zinc-950 border border-zinc-800 rounded px-1.5 py-0.5 text-zinc-100 text-center focus:outline-none focus:border-emerald-500"
-        />
+      {/* Element Type Indicator */}
+      <span className="font-mono text-[10px] uppercase font-bold text-emerald-400 bg-emerald-950/70 border border-emerald-800/60 px-1.5 py-0.5 rounded">
+        {item.type}
+      </span>
+
+      {/* Meter Dimension Steppers & Inputs */}
+      <div className="flex items-center space-x-1.5 font-mono text-[11px] bg-zinc-950/80 px-2 py-0.5 rounded-lg border border-zinc-800">
+        {/* Width Control */}
+        <div className="flex items-center space-x-0.5">
+          <span className="text-zinc-500 font-semibold text-[10px]">W</span>
+          <button
+            type="button"
+            title="Decrease width by 0.5m"
+            onClick={() => adjustWidth(-0.5)}
+            className="p-0.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors"
+          >
+            <Minus className="w-2.5 h-2.5" />
+          </button>
+          <input
+            type="number"
+            step="0.5"
+            min="0.3"
+            max="30"
+            value={meterWidth}
+            onChange={handleWidthChange}
+            className="w-11 bg-transparent text-center text-zinc-100 font-bold focus:outline-none focus:text-emerald-400"
+          />
+          <span className="text-zinc-500 text-[10px]">m</span>
+          <button
+            type="button"
+            title="Increase width by 0.5m"
+            onClick={() => adjustWidth(0.5)}
+            className="p-0.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors"
+          >
+            <Plus className="w-2.5 h-2.5" />
+          </button>
+        </div>
+
+        <span className="text-zinc-600">×</span>
+
+        {/* Height Control */}
+        <div className="flex items-center space-x-0.5">
+          <span className="text-zinc-500 font-semibold text-[10px]">H</span>
+          <button
+            type="button"
+            title="Decrease height by 0.5m"
+            onClick={() => adjustHeight(-0.5)}
+            className="p-0.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors"
+          >
+            <Minus className="w-2.5 h-2.5" />
+          </button>
+          <input
+            type="number"
+            step="0.5"
+            min="0.3"
+            max="30"
+            value={meterHeight}
+            onChange={handleHeightChange}
+            className="w-11 bg-transparent text-center text-zinc-100 font-bold focus:outline-none focus:text-emerald-400"
+          />
+          <span className="text-zinc-500 text-[10px]">m</span>
+          <button
+            type="button"
+            title="Increase height by 0.5m"
+            onClick={() => adjustHeight(0.5)}
+            className="p-0.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors"
+          >
+            <Plus className="w-2.5 h-2.5" />
+          </button>
+        </div>
       </div>
 
-      {/* Quick Aspect Presets */}
+      {/* Realistic Scale Presets */}
       <div className="flex items-center space-x-1 pl-1 border-l border-zinc-800">
         <button
           type="button"
-          title="Square 100x100"
-          onClick={() => setPreset(120, 120)}
+          title="1m × 1m (Tree square)"
+          onClick={() => setMeterPreset(1, 1)}
           className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
         >
-          1:1
+          1×1m
         </button>
         <button
           type="button"
-          title="Wide 200x100"
-          onClick={() => setPreset(200, 100)}
+          title="2m × 2m (Standard plot)"
+          onClick={() => setMeterPreset(2, 2)}
           className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
         >
-          2:1
+          2×2m
+        </button>
+        <button
+          type="button"
+          title="4m × 2m (Canal / extended field)"
+          onClick={() => setMeterPreset(4, 2)}
+          className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
+        >
+          4×2m
         </button>
       </div>
 
-      {/* Action Buttons */}
+      {/* Layer Priority Tier & Actions */}
       <div className="flex items-center space-x-1 pl-1 border-l border-zinc-800">
         <button
           type="button"
-          title="Bring to front"
+          title="Reorder within layer tier"
           onClick={() => onBringToFront(item.id)}
           className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
         >

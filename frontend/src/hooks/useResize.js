@@ -8,29 +8,32 @@ export const useResize = ({ item, snapToGrid, onResize }) => {
   const startResize = useCallback(
     (e, handle) => {
       e.stopPropagation();
-      e.preventDefault();
+      if (e.preventDefault) e.preventDefault();
 
       setIsResizing(true);
       setActiveHandle(handle);
 
-      const startClientX = e.clientX;
-      const startClientY = e.clientY;
+      const startClientX = e.clientX ?? (e.touches ? e.touches[0].clientX : 0);
+      const startClientY = e.clientY ?? (e.touches ? e.touches[0].clientY : 0);
       const startWidth = item.width;
       const startHeight = item.height;
       const startX = item.x;
       const startY = item.y;
 
-      const handleMouseMove = (moveEvent) => {
-        let deltaX = moveEvent.clientX - startClientX;
-        let deltaY = moveEvent.clientY - startClientY;
+      const minW = Math.max(10, item.minWidth ?? 12);
+      const minH = Math.max(10, item.minHeight ?? 12);
+
+      const handleMove = (moveEvent) => {
+        const clientX = moveEvent.clientX ?? (moveEvent.touches ? moveEvent.touches[0].clientX : startClientX);
+        const clientY = moveEvent.clientY ?? (moveEvent.touches ? moveEvent.touches[0].clientY : startClientY);
+
+        let deltaX = clientX - startClientX;
+        let deltaY = clientY - startClientY;
 
         let newWidth = startWidth;
         let newHeight = startHeight;
         let newX = startX;
         let newY = startY;
-
-        const minW = Math.max(40, item.minWidth || 40);
-        const minH = Math.max(30, item.minHeight || 30);
 
         if (handle.includes('e')) {
           newWidth = Math.max(minW, startWidth + deltaX);
@@ -80,15 +83,23 @@ export const useResize = ({ item, snapToGrid, onResize }) => {
         });
       };
 
-      const handleMouseUp = () => {
+      const handleEnd = () => {
         setIsResizing(false);
         setActiveHandle(null);
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('pointermove', handleMove);
+        window.removeEventListener('pointerup', handleEnd);
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleEnd);
+        window.removeEventListener('touchmove', handleMove);
+        window.removeEventListener('touchend', handleEnd);
       };
 
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointermove', handleMove);
+      window.addEventListener('pointerup', handleEnd);
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleEnd);
+      window.addEventListener('touchmove', handleMove);
+      window.addEventListener('touchend', handleEnd);
     },
     [item, snapToGrid, onResize]
   );

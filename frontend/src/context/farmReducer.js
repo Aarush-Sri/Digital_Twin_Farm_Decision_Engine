@@ -1,7 +1,4 @@
-/**
- * Deterministic Farm Reducer
- * Handles state transitions for canvas items, selection, dimensions, and grid snap.
- */
+import { calculateZIndex, getItemDefinition } from '../types/farm';
 
 export const INITIAL_STATE = {
   items: [],
@@ -26,10 +23,15 @@ export const farmReducer = (state, action) => {
   switch (action.type) {
     case ACTION_TYPES.ADD_ITEM: {
       const { item } = action.payload;
+      const subIndex = state.nextZIndex;
+      const zIndex = item.zIndex || calculateZIndex(item.type, subIndex);
+
       const newItem = {
         ...item,
-        zIndex: state.nextZIndex,
+        zIndex,
+        subIndex,
       };
+
       return {
         ...state,
         items: [...state.items, newItem],
@@ -49,18 +51,30 @@ export const farmReducer = (state, action) => {
     }
 
     case ACTION_TYPES.UPDATE_DIMENSIONS: {
-      const { id, width, height, x, y } = action.payload;
+      // Support both { id, width, height, x, y } and { payload: { id, ... } }
+      const p = action.payload || {};
+      const id = typeof p.id === 'object' && p.id !== null ? p.id.id : p.id;
+      const rawW = p.width ?? (typeof p.id === 'object' ? p.id.width : undefined);
+      const rawH = p.height ?? (typeof p.id === 'object' ? p.id.height : undefined);
+      const rawX = p.x ?? (typeof p.id === 'object' ? p.id.x : undefined);
+      const rawY = p.y ?? (typeof p.id === 'object' ? p.id.y : undefined);
+
       return {
         ...state,
         items: state.items.map((item) => {
           if (item.id !== id) return item;
+          const itemDef = getItemDefinition(item.type);
+          const minW = item.minWidth || itemDef.minWidth || 12;
+          const minH = item.minHeight || itemDef.minHeight || 12;
+
           const updated = {
             ...item,
-            width: Math.max(40, Math.round(width)),
-            height: Math.max(30, Math.round(height)),
+            width: rawW !== undefined ? Math.max(minW, Math.round(rawW)) : item.width,
+            height: rawH !== undefined ? Math.max(minH, Math.round(rawH)) : item.height,
           };
-          if (x !== undefined) updated.x = Math.max(0, Math.round(x));
-          if (y !== undefined) updated.y = Math.max(0, Math.round(y));
+
+          if (rawX !== undefined) updated.x = Math.max(0, Math.round(rawX));
+          if (rawY !== undefined) updated.y = Math.max(0, Math.round(rawY));
           return updated;
         }),
       };
@@ -107,13 +121,17 @@ export const farmReducer = (state, action) => {
 
     case ACTION_TYPES.BRING_TO_FRONT: {
       const { id } = action.payload;
-      const nextZ = state.nextZIndex + 1;
+      const nextSubIndex = state.nextZIndex + 1;
+
       return {
         ...state,
-        items: state.items.map((item) =>
-          item.id === id ? { ...item, zIndex: nextZ } : item
-        ),
-        nextZIndex: nextZ,
+        items: state.items.map((item) => {
+          if (item.id !== id) return item;
+          // Calculate new zIndex respecting item type priority tier!
+          const newZIndex = calculateZIndex(item.type, nextSubIndex);
+          return { ...item, zIndex: newZIndex, subIndex: nextSubIndex };
+        }),
+        nextZIndex: nextSubIndex,
       };
     }
 
