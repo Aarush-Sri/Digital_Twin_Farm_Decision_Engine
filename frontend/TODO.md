@@ -14,5 +14,10 @@
 - [x] Fix dimension extension & resize handler payload mismatch
 - [x] Realistic scale system: 1m = 40px (Tree 1×1m, Crops/Grass 2×2m, Fence thin & long, Water canal)
 - [x] Overlaying hierarchy logic: Fence sits above Water; Water can never cover Fence
-- [x] Unit test suite (17/17 passing, 100% pass rate)
-- [x] Live Vite dev server running at `http://localhost:5173/`
+- [x] Connect frontend UI to FastAPI backend via `src/api/apiClient.js`
+- [x] Add Vite development proxy to `http://127.0.0.1:8000` for `/api` and `/health`
+- [x] Implement real-time telemetry `EnvironmentBar` (Solar W/m², Temp, Rain, ET0, Active Crops, Yield)
+- [x] Build `AgentChatDrawer` with multi-step reasoning thoughts, tool calls, and agronomist presets
+- [x] Build `WhatIfModal` for isolated forward sandbox comparisons (Drip vs Flood vs Fertilize vs Drought)
+- [x] Add Canvas-to-Backend synchronization (`Sync Canvas`) and snapshot persistence (`Save`)
+- [x] Complete unit test suite (27/27 passing across 4 test suites, 100% pass rate)

@@ -8,6 +8,9 @@ import { Header } from '../components/layout/Header';
 import { Sidebar } from '../components/layout/Sidebar';
 import { FarmCanvas } from '../components/canvas/FarmCanvas';
 import { DimensionBadge } from '../components/canvas/DimensionBadge';
+import { EnvironmentBar } from '../components/simulation/EnvironmentBar';
+import { WhatIfModal } from '../components/simulation/WhatIfModal';
+import { AgentChatDrawer } from '../components/agent/AgentChatDrawer';
 
 describe('Farm UI Components', () => {
   it('renders PaletteCard with label, category, and quick add button', () => {
@@ -24,7 +27,7 @@ describe('Farm UI Components', () => {
     expect(mockQuickAdd).toHaveBeenCalledWith(grassDef);
   });
 
-  it('renders Header with brand and controls', () => {
+  it('renders Header with brand, placed item count, and snap controls', () => {
     render(
       <FarmProvider>
         <Header />
@@ -32,7 +35,9 @@ describe('Farm UI Components', () => {
     );
 
     expect(screen.getByText('DigiFarm')).toBeInTheDocument();
-    expect(screen.getByText(/Snap Grid:/)).toBeInTheDocument();
+    expect(screen.getByText('Farm Canvas')).toBeInTheDocument();
+    expect(screen.getByText(/Placed Items:/)).toBeInTheDocument();
+    expect(screen.getByText(/Snap ON/)).toBeInTheDocument();
     expect(screen.getByText('Clear')).toBeInTheDocument();
   });
 
@@ -63,6 +68,29 @@ describe('Farm UI Components', () => {
       screen.getByText(/Drag elements from the left palette to start planning/)
     ).toBeInTheDocument();
     expect(screen.getByText(/Objects: 0/)).toBeInTheDocument();
+  });
+
+  it('renders WhatIfModal when open and shows scenario presets', () => {
+    render(
+      <FarmProvider>
+        <WhatIfModal isOpen={true} onClose={vi.fn()} />
+      </FarmProvider>
+    );
+
+    expect(screen.getByText('Sandbox What-If Decision Engine')).toBeInTheDocument();
+    expect(screen.getByText(/Drip Irrigation/)).toBeInTheDocument();
+    expect(screen.getByText(/NPK Fertilizer Boost/)).toBeInTheDocument();
+  });
+
+  it('renders AgentChatDrawer when open and shows multi-step console', () => {
+    render(
+      <FarmProvider>
+        <AgentChatDrawer isOpen={true} onClose={vi.fn()} />
+      </FarmProvider>
+    );
+
+    expect(screen.getByText('AI Agronomist')).toBeInTheDocument();
+    expect(screen.getByText('Health Check')).toBeInTheDocument();
   });
 
   it('updates dimensions from DimensionBadge numeric inputs and presets', () => {

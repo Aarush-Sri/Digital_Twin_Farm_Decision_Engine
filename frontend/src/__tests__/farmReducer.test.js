@@ -137,7 +137,6 @@ describe('Farm Reducer State Transitions', () => {
       nextZIndex: 3,
     };
 
-    // Bringing water to front should NEVER bring it above fence
     const state = farmReducer(initialState, {
       type: ACTION_TYPES.BRING_TO_FRONT,
       payload: { id: 'water-1' },
@@ -147,5 +146,50 @@ describe('Farm Reducer State Transitions', () => {
     const fence = state.items.find((i) => i.id === 'fence-1');
 
     expect(fence.zIndex).toBeGreaterThan(water.zIndex);
+  });
+
+  it('handles backend status and farm data actions', () => {
+    const stateWithStatus = farmReducer(INITIAL_STATE, {
+      type: ACTION_TYPES.SET_BACKEND_STATUS,
+      payload: { status: 'connected' },
+    });
+    expect(stateWithStatus.backendStatus).toBe('connected');
+
+    const stateWithFarm = farmReducer(stateWithStatus, {
+      type: ACTION_TYPES.SET_FARM_DATA,
+      payload: {
+        farmId: 'test-farm-123',
+        farmName: 'Test Farm',
+        world: {
+          current_day: 5,
+          environment: { solar_radiation_wm2: 500.0, temp_avg_c: 24.0 },
+          tiles: [],
+          history: [],
+        },
+        summary: { total_projected_yield_kg: 42.0 },
+      },
+    });
+
+    expect(stateWithFarm.farmId).toBe('test-farm-123');
+    expect(stateWithFarm.currentDay).toBe(5);
+    expect(stateWithFarm.environment.solar_radiation_wm2).toBe(500.0);
+    expect(stateWithFarm.farmSummary.total_projected_yield_kg).toBe(42.0);
+  });
+
+  it('handles simulation step success action', () => {
+    const state = farmReducer(INITIAL_STATE, {
+      type: ACTION_TYPES.STEP_SIMULATION_SUCCESS,
+      payload: {
+        currentDay: 2,
+        environment: { day: 2, temp_avg_c: 25.0 },
+        summary: { total_projected_yield_kg: 10.5 },
+        latestLog: { day: 2, avg_crop_health: 98.0 },
+      },
+    });
+
+    expect(state.currentDay).toBe(2);
+    expect(state.environment.temp_avg_c).toBe(25.0);
+    expect(state.simulationLogs).toHaveLength(1);
+    expect(state.simulationLogs[0].avg_crop_health).toBe(98.0);
   });
 });
