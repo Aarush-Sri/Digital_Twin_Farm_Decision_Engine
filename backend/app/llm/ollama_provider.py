@@ -80,18 +80,23 @@ class OllamaProvider(BaseLLMProvider):
                     ]
                 formatted_msgs.append(msg_dict)
 
+            is_small_model = any(s in active_model.lower() for s in ["1b", "2b", "0.5b"])
+            effective_tools = None if is_small_model else tools
+
+            options: Dict[str, Any] = {
+                "temperature": 0.2 if is_small_model else temperature,
+                "repeat_penalty": 1.15,
+            }
+            if is_small_model:
+                options["num_predict"] = 350
+
             payload: Dict[str, Any] = {
                 "model": active_model,
                 "messages": formatted_msgs,
                 "stream": False,
                 "think": False,
-                "options": {"temperature": temperature},
+                "options": options,
             }
-
-            # Small 1B/2B models struggle with complex tool-calling grammar constraints,
-            # which can cause 20+ second stalls. Only attach tools for models larger than 2B.
-            is_small_model = any(s in active_model.lower() for s in ["1b", "2b", "0.5b"])
-            effective_tools = None if is_small_model else tools
 
             if effective_tools:
                 payload["tools"] = [

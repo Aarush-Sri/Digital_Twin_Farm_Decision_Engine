@@ -786,7 +786,11 @@ export const FarmProvider = ({ children }) => {
 You have full access to the user's virtual farm layout.
 ${farmContextStr}
 
-Answer any question the user asks—whether about hypothetical scenarios ("what if"), agronomy, soil physics, biology, planting layouts, climate extremes, or general inquiries—with deep expertise, clear formatting, and actionable insight.`;
+Instructions:
+- Be direct, concise, and strictly to the point.
+- Deliver the key answer in the very first 1-2 sentences. Avoid conversational greetings, pleasantries, or echoing the prompt back.
+- If providing recommendations, limit them to 2-3 short, high-impact bullet points.
+- Cite exact spatial metrics (e.g. plot coordinates in meters, soil moisture %, distance to water).`;
 
     const validHistory = (chatHistory || []).filter(
       (m) => m.content && m.content.trim() && m.id !== 'welcome'
@@ -890,11 +894,16 @@ Answer any question the user asks—whether about hypothetical scenarios ("what 
 - Simulation Day: ${state.currentDay}
 - Ambient Weather: Temp avg 22°C, Solar Radiation 450 W/m², Reference ET0 4.2 mm/day`;
 
+    const isSmallLocalModel = (requestedModel || '').includes('1b') || (requestedModel || '').includes('2b') || (requestedModel || '').includes('3.2');
     const systemInstruction = `You are GreenTwin's AI Agronomist and Digital Farmland Twin reasoning engine.
 You have full access to the virtual farm layout:
 ${farmContextStr}
 
-Answer the user's questions clearly, concisely, and with expert agronomy and simulation reasoning.`;
+Instructions:
+- Be direct, concise, and strictly to the point.
+- Answer the user's question immediately in the very first sentence. Do NOT start with greetings, pleasantries, or preamble.
+- Keep the response short and actionable (maximum 2-3 crisp bullet points if recommending steps).
+- Always use concrete farm facts (e.g., crop types, meters from water, soil moisture %).`;
 
     const messages = [
       { role: 'system', content: systemInstruction },
@@ -942,7 +951,11 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
         messages,
         stream: false,
         think: false,
-        options: { temperature: 0.3 },
+        options: { 
+          temperature: isSmallLocalModel ? 0.2 : 0.3,
+          repeat_penalty: 1.15,
+          ...(isSmallLocalModel ? { num_predict: 350 } : {}),
+        },
       }),
     });
 
