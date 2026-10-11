@@ -35,6 +35,7 @@ export const FarmItem = ({
   item,
   isSelected,
   snapToGrid,
+  zoom = 1,
   onSelect,
   onUpdatePosition,
   onUpdateDimensions,
@@ -76,8 +77,9 @@ export const FarmItem = ({
 
     const handlePointerMove = (moveEvent) => {
       if (!isDraggingItem.current) return;
-      let dx = moveEvent.clientX - dragStartPos.current.mouseX;
-      let dy = moveEvent.clientY - dragStartPos.current.mouseY;
+      const zoomFactor = Number(zoom) || 1;
+      let dx = (moveEvent.clientX - dragStartPos.current.mouseX) / zoomFactor;
+      let dy = (moveEvent.clientY - dragStartPos.current.mouseY) / zoomFactor;
 
       let newX = dragStartPos.current.itemX + dx;
       let newY = dragStartPos.current.itemY + dy;

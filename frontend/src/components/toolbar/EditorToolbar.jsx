@@ -10,10 +10,11 @@ import {
   Maximize, 
   Magnet, 
   Settings2,
-  MapPin
+  MapPin,
+  Compass
 } from 'lucide-react';
 
-export const EditorToolbar = ({ onOpenFarmSettings }) => {
+export const EditorToolbar = ({ onOpenFarmSettings, onCenterFarm }) => {
   const { 
     items,
     selectedId,
@@ -149,6 +150,17 @@ export const EditorToolbar = ({ onOpenFarmSettings }) => {
         >
           <ZoomIn className="w-3.5 h-3.5" />
         </button>
+
+        {onCenterFarm && (
+          <button
+            type="button"
+            onClick={onCenterFarm}
+            className="p-1.5 rounded-lg text-stone-300 hover:bg-stone-800 hover:text-amber-200 transition-all"
+            title="Center Board & Farm (C)"
+          >
+            <Compass className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* 4. Grid Snapping */}
