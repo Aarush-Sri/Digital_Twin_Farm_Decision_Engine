@@ -402,5 +402,6 @@ export const FarmCanvas = () => {
         <span>Objects: {items.length}</span>
       </div>
     </main>
+    </div>
   );
 };
