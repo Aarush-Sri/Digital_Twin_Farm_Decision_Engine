@@ -1,10 +1,23 @@
-import { FARM_ITEMS, pxToMeters } from '../../types/farm';
+import React, { useState, useMemo } from 'react';
+import { FARM_ITEMS, FARM_CATEGORIES, pxToMeters } from '../../types/farm';
 import { PaletteCard } from '../palette/PaletteCard';
 import { useFarm } from '../../hooks/useFarm';
-import { Layers, MousePointerClick, Sparkles } from 'lucide-react';
+import { 
+  Layers, 
+  Search, 
+  X, 
+  MousePointerClick, 
+  Sparkles,
+  ChevronDown,
+  ChevronRight,
+  Filter
+} from 'lucide-react';
 
 export const Sidebar = () => {
   const { addItem, items, selectedItem, snapCoordinate } = useFarm();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [collapsedCategories, setCollapsedCategories] = useState({});
 
   const handleQuickAdd = (itemDef) => {
     // Generate position staggered based on item count
@@ -21,13 +34,49 @@ export const Sidebar = () => {
       height: itemDef.defaultHeight,
       minWidth: itemDef.minWidth,
       minHeight: itemDef.minHeight,
+      isPointIcon: Boolean(itemDef.isPointIcon),
     });
   };
 
+  const toggleCategoryCollapse = (cat) => {
+    setCollapsedCategories((prev) => ({
+      ...prev,
+      [cat]: !prev[cat],
+    }));
+  };
+
+  // Filtered items based on search and category tab
+  const filteredItems = useMemo(() => {
+    return FARM_ITEMS.filter((item) => {
+      const matchesSearch = 
+        !searchQuery.trim() ||
+        item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory = 
+        selectedCategory === 'All' || item.category === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchQuery, selectedCategory]);
+
+  // Group items by category
+  const categoriesToDisplay = useMemo(() => {
+    const cats = selectedCategory === 'All' 
+      ? ['Terrain', 'Crops', 'Trees', 'Structures', 'Irrigation']
+      : [selectedCategory];
+
+    return cats.map((cat) => ({
+      name: cat,
+      items: filteredItems.filter((i) => i.category === cat),
+    })).filter((group) => group.items.length > 0);
+  }, [filteredItems, selectedCategory]);
+
   return (
-    <aside className="w-72 md:w-80 h-full flex flex-col bg-stone-950 border-r border-amber-950/80 z-20 select-none shadow-2xl">
+    <aside className="w-80 md:w-88 h-full flex flex-col bg-stone-950 border-r border-amber-950/80 z-20 select-none shadow-2xl">
       {/* Sidebar Header */}
-      <div className="p-4 border-b border-amber-950/80 bg-gradient-to-b from-stone-900 via-stone-950 to-stone-950">
+      <div className="p-3.5 border-b border-amber-950/80 bg-gradient-to-b from-stone-900 via-stone-950 to-stone-950 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-6 h-6 rounded bg-amber-900/60 border border-amber-600/60 flex items-center justify-center text-amber-300">
@@ -38,34 +87,112 @@ export const Sidebar = () => {
             </h2>
           </div>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800/60">
-            {FARM_ITEMS.length} Elements
+            {filteredItems.length} Elements
           </span>
         </div>
-        <p className="mt-1 text-[11px] text-stone-400">
-          Drag & drop onto pasture to build your digital twin
-        </p>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-500" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search elements (wheat, neem, well)..."
+            className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-stone-900/90 border border-stone-800 focus:border-amber-500 text-xs text-amber-100 placeholder-stone-500 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-amber-200"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+
+        {/* Category Filter Pills (Terrain, Crops, Trees, Structures, Irrigation) */}
+        <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar pb-0.5 text-[11px]">
+          {FARM_CATEGORIES.map((cat) => {
+            const isActive = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`flex-shrink-0 px-2.5 py-1 rounded-md font-medium transition-all ${
+                  isActive
+                    ? 'bg-amber-600 text-stone-950 font-bold shadow-sm'
+                    : 'bg-stone-900/80 text-stone-400 hover:text-stone-200 hover:bg-stone-800 border border-stone-800/60'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Item List */}
-      <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5">
-        {FARM_ITEMS.map((item) => (
-          <PaletteCard 
-            key={item.type} 
-            itemDef={item} 
-            onQuickAdd={handleQuickAdd} 
-          />
-        ))}
+      {/* Item List (Grouped or Filtered) */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+        {categoriesToDisplay.length === 0 ? (
+          <div className="p-6 text-center text-xs text-stone-500 space-y-1">
+            <Filter className="w-6 h-6 mx-auto text-stone-600 mb-2" />
+            <p className="font-semibold text-stone-400">No elements found</p>
+            <p className="text-[10px]">Try clearing search or switching category filter.</p>
+          </div>
+        ) : (
+          categoriesToDisplay.map((catGroup) => {
+            const isCollapsed = Boolean(collapsedCategories[catGroup.name]);
+            return (
+              <div key={catGroup.name} className="space-y-1.5">
+                {/* Category Header Accordion */}
+                <button
+                  type="button"
+                  onClick={() => toggleCategoryCollapse(catGroup.name)}
+                  className="w-full flex items-center justify-between py-1 px-1.5 text-left rounded hover:bg-stone-900/60 transition-colors"
+                >
+                  <div className="flex items-center space-x-1.5">
+                    {isCollapsed ? (
+                      <ChevronRight className="w-3.5 h-3.5 text-stone-500" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-amber-400" />
+                    )}
+                    <span className="text-[11px] font-mono font-bold tracking-wider text-amber-200 uppercase">
+                      {catGroup.name}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-stone-900 text-stone-400 border border-stone-800">
+                    {catGroup.items.length}
+                  </span>
+                </button>
+
+                {/* Cards in this Category */}
+                {!isCollapsed && (
+                  <div className="space-y-2 pl-1">
+                    {catGroup.items.map((item) => (
+                      <PaletteCard
+                        key={item.type}
+                        itemDef={item}
+                        onQuickAdd={handleQuickAdd}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Helpful Instructions Footer */}
-      <div className="p-3.5 border-t border-amber-950/80 bg-stone-900/40 text-[11px] text-stone-400 space-y-2">
+      <div className="p-3 border-t border-amber-950/80 bg-stone-900/40 text-[11px] text-stone-400 space-y-1.5">
         <div className="flex items-start space-x-2">
           <MousePointerClick className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
-          <span>Click any placed plot to resize handles or change dimensions.</span>
+          <span>Point icons (Trees, Wells) have fixed 2m×2m footprint.</span>
         </div>
         <div className="flex items-start space-x-2">
           <Sparkles className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
-          <span>Fences sit on top of land & water to protect crop rows.</span>
+          <span>Click placed plots to open the Object Inspector.</span>
         </div>
 
         {selectedItem && (

@@ -6,13 +6,28 @@ export const INITIAL_STATE = {
   selectedId: null,
   snapToGrid: true,
   nextZIndex: 1,
+  zoom: 1.0, // 0.5 to 2.0 (50% to 200%)
+
+  // History stack for Undo / Redo
+  past: [],
+  future: [],
+
+  // Farm Real-World Dimensions & Settings
+  farmSettings: {
+    name: 'Greenfield Valley Digital Twin',
+    location: 'Zone 6b • Greenfield Valley',
+    totalSize: 2.5, // 2.5 Acres
+    unit: 'acres', // 'acres' | 'hectares'
+    boundaryWidthM: 100, // 100m
+    boundaryHeightM: 100, // 100m
+  },
 
   // Backend Connection & Engine State
   backendStatus: 'connecting', // 'connecting' | 'connected' | 'offline' | 'error'
   backendError: null,
   isSyncing: false,
   farmId: null,
-  farmName: 'My Virtual Farm',
+  farmName: 'Greenfield Valley Digital Twin',
   currentDay: 1,
   environment: {
     day: 1,
@@ -44,13 +59,23 @@ export const ACTION_TYPES = {
   ADD_ITEM: 'ADD_ITEM',
   UPDATE_POSITION: 'UPDATE_POSITION',
   UPDATE_DIMENSIONS: 'UPDATE_DIMENSIONS',
+  UPDATE_ITEM_PROPERTIES: 'UPDATE_ITEM_PROPERTIES',
   SELECT_ITEM: 'SELECT_ITEM',
   DESELECT_ALL: 'DESELECT_ALL',
   DELETE_ITEM: 'DELETE_ITEM',
+  DUPLICATE_ITEM: 'DUPLICATE_ITEM',
   CLEAR_CANVAS: 'CLEAR_CANVAS',
   TOGGLE_SNAP: 'TOGGLE_SNAP',
   BRING_TO_FRONT: 'BRING_TO_FRONT',
   LOAD_SAVED_ITEMS: 'LOAD_SAVED_ITEMS',
+
+  // History Actions
+  UNDO: 'UNDO',
+  REDO: 'REDO',
+
+  // Zoom & Settings Actions
+  SET_ZOOM: 'SET_ZOOM',
+  SET_FARM_SETTINGS: 'SET_FARM_SETTINGS',
 
   // Backend & Simulation Actions
   SET_BACKEND_STATUS: 'SET_BACKEND_STATUS',
@@ -58,6 +83,14 @@ export const ACTION_TYPES = {
   SET_SYNCING: 'SET_SYNCING',
   STEP_SIMULATION_SUCCESS: 'STEP_SIMULATION_SUCCESS',
   UPDATE_ENVIRONMENT: 'UPDATE_ENVIRONMENT',
+};
+
+const pushHistory = (state) => {
+  const past = state.past || [];
+  return {
+    past: [...past.slice(Math.max(0, past.length - 29)), state.items],
+    future: [],
+  };
 };
 
 export const farmReducer = (state, action) => {
@@ -73,8 +106,11 @@ export const farmReducer = (state, action) => {
         subIndex,
       };
 
+      const history = pushHistory(state);
+
       return {
         ...state,
+        ...history,
         items: [...state.items, newItem],
         selectedId: newItem.id,
         nextZIndex: state.nextZIndex + 1,
@@ -83,16 +119,26 @@ export const farmReducer = (state, action) => {
 
     case ACTION_TYPES.UPDATE_POSITION: {
       const { id, x, y } = action.payload;
+      // Find if position actually changed to avoid spurious history
+      const existing = state.items.find((item) => item.id === id);
+      const newX = Math.max(0, x);
+      const newY = Math.max(0, y);
+      if (existing && existing.x === newX && existing.y === newY) {
+        return state;
+      }
+
+      const history = pushHistory(state);
+
       return {
         ...state,
+        ...history,
         items: state.items.map((item) =>
-          item.id === id ? { ...item, x: Math.max(0, x), y: Math.max(0, y) } : item
+          item.id === id ? { ...item, x: newX, y: newY } : item
         ),
       };
     }
 
     case ACTION_TYPES.UPDATE_DIMENSIONS: {
-      // Support both { id, width, height, x, y } and { payload: { id, ... } }
       const p = action.payload || {};
       const id = typeof p.id === 'object' && p.id !== null ? p.id.id : p.id;
       const rawW = p.width ?? (typeof p.id === 'object' ? p.id.width : undefined);
@@ -100,11 +146,26 @@ export const farmReducer = (state, action) => {
       const rawX = p.x ?? (typeof p.id === 'object' ? p.id.x : undefined);
       const rawY = p.y ?? (typeof p.id === 'object' ? p.id.y : undefined);
 
+      const history = pushHistory(state);
+
       return {
         ...state,
+        ...history,
         items: state.items.map((item) => {
           if (item.id !== id) return item;
           const itemDef = getItemDefinition(item.type);
+          
+          // If point icon, keep fixed size
+          if (itemDef.isPointIcon || item.isPointIcon) {
+            return {
+              ...item,
+              width: item.width || itemDef.defaultWidth,
+              height: item.height || itemDef.defaultHeight,
+              x: rawX !== undefined ? Math.max(0, Math.round(rawX)) : item.x,
+              y: rawY !== undefined ? Math.max(0, Math.round(rawY)) : item.y,
+            };
+          }
+
           const minW = item.minWidth || itemDef.minWidth || 12;
           const minH = item.minHeight || itemDef.minHeight || 12;
 
@@ -118,6 +179,19 @@ export const farmReducer = (state, action) => {
           if (rawY !== undefined) updated.y = Math.max(0, Math.round(rawY));
           return updated;
         }),
+      };
+    }
+
+    case ACTION_TYPES.UPDATE_ITEM_PROPERTIES: {
+      const { id, properties } = action.payload;
+      const history = pushHistory(state);
+
+      return {
+        ...state,
+        ...history,
+        items: state.items.map((item) =>
+          item.id === id ? { ...item, ...properties } : item
+        ),
       };
     }
 
@@ -138,18 +212,109 @@ export const farmReducer = (state, action) => {
 
     case ACTION_TYPES.DELETE_ITEM: {
       const { id } = action.payload;
+      const targetId = id || state.selectedId;
+      if (!targetId) return state;
+
+      const history = pushHistory(state);
+
       return {
         ...state,
-        items: state.items.filter((item) => item.id !== id),
-        selectedId: state.selectedId === id ? null : state.selectedId,
+        ...history,
+        items: state.items.filter((item) => item.id !== targetId),
+        selectedId: state.selectedId === targetId ? null : state.selectedId,
+      };
+    }
+
+    case ACTION_TYPES.DUPLICATE_ITEM: {
+      const targetId = action.payload?.id || state.selectedId;
+      if (!targetId) return state;
+
+      const sourceItem = state.items.find((i) => i.id === targetId);
+      if (!sourceItem) return state;
+
+      const subIndex = state.nextZIndex;
+      const zIndex = calculateZIndex(sourceItem.type, subIndex);
+      const history = pushHistory(state);
+
+      const duplicatedItem = {
+        ...sourceItem,
+        id: `farm-piece-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        x: sourceItem.x + 40,
+        y: sourceItem.y + 40,
+        zIndex,
+        subIndex,
+      };
+
+      return {
+        ...state,
+        ...history,
+        items: [...state.items, duplicatedItem],
+        selectedId: duplicatedItem.id,
+        nextZIndex: state.nextZIndex + 1,
       };
     }
 
     case ACTION_TYPES.CLEAR_CANVAS: {
+      if (state.items.length === 0) return state;
+      const history = pushHistory(state);
+
       return {
         ...state,
+        ...history,
         items: [],
         selectedId: null,
+      };
+    }
+
+    case ACTION_TYPES.UNDO: {
+      if (!state.past || state.past.length === 0) return state;
+
+      const previousItems = state.past[state.past.length - 1];
+      const newPast = state.past.slice(0, state.past.length - 1);
+      const newFuture = [state.items, ...(state.future || [])];
+
+      return {
+        ...state,
+        past: newPast,
+        future: newFuture,
+        items: previousItems,
+        selectedId: previousItems.some((i) => i.id === state.selectedId) ? state.selectedId : null,
+      };
+    }
+
+    case ACTION_TYPES.REDO: {
+      if (!state.future || state.future.length === 0) return state;
+
+      const nextItems = state.future[0];
+      const newFuture = state.future.slice(1);
+      const newPast = [...(state.past || []), state.items];
+
+      return {
+        ...state,
+        past: newPast,
+        future: newFuture,
+        items: nextItems,
+        selectedId: nextItems.some((i) => i.id === state.selectedId) ? state.selectedId : null,
+      };
+    }
+
+    case ACTION_TYPES.SET_ZOOM: {
+      const { zoom } = action.payload;
+      const clampedZoom = Math.max(0.4, Math.min(2.5, Number(zoom) || 1.0));
+      return {
+        ...state,
+        zoom: clampedZoom,
+      };
+    }
+
+    case ACTION_TYPES.SET_FARM_SETTINGS: {
+      return {
+        ...state,
+        farmSettings: {
+          ...state.farmSettings,
+          ...action.payload,
+        },
+        farmName: action.payload.name || state.farmName,
       };
     }
 
@@ -159,6 +324,8 @@ export const farmReducer = (state, action) => {
         ...state,
         items: items || [],
         selectedId: null,
+        past: [],
+        future: [],
       };
     }
 

@@ -101,10 +101,11 @@ export const FarmItem = ({
     window.addEventListener('pointerup', handlePointerUp);
   };
 
+  const isPoint = Boolean(item.isPointIcon || itemDef.isPointIcon);
   const isSlim = item.height < 32 || item.width < 32;
   const isCompact = item.height < 60 || item.width < 60;
 
-  const isFrameless = item.type === 'tree' || item.type === 'fence' || item.type === 'barn' || item.type === 'well';
+  const isFrameless = isPoint || item.type === 'tree' || item.type.includes('tree') || item.type === 'fence' || item.type === 'barn' || item.type === 'well' || item.type === 'gate' || item.type === 'shed';
 
   return (
     <motion.div
@@ -136,7 +137,7 @@ export const FarmItem = ({
           backgroundColor: isFrameless ? 'transparent' : itemDef.color.bg,
         }}
       >
-        {/* GRASS PLOT: Lush Stardew Meadow with raised border */}
+        {/* GRASS PLOT */}
         {item.type === 'grass' && (
           <div 
             className="absolute inset-0 pixel-crisp"
@@ -147,6 +148,20 @@ export const FarmItem = ({
             }}
           >
             <div className="absolute inset-0 border-2 border-emerald-500/40 rounded-lg pointer-events-none" />
+          </div>
+        )}
+
+        {/* TILLED SOIL: Loamy soil tile */}
+        {item.type === 'soil' && (
+          <div 
+            className="absolute inset-0 pixel-crisp shadow-inner"
+            style={{
+              backgroundImage: "url('/assets/soil_tile.png')",
+              backgroundSize: '80px 80px',
+              backgroundRepeat: 'repeat',
+            }}
+          >
+            <div className="absolute inset-0 border border-amber-800/60 rounded-lg pointer-events-none" />
           </div>
         )}
 
@@ -355,10 +370,12 @@ export const FarmItem = ({
       {/* When selected: Show Resize Handles & Floating Dimension Toolbar */}
       {isSelected && (
         <>
-          <ResizeHandles
-            activeHandle={activeHandle}
-            onStartResize={startResize}
-          />
+          {!isPoint && (
+            <ResizeHandles
+              activeHandle={activeHandle}
+              onStartResize={startResize}
+            />
+          )}
           <DimensionBadge
             item={item}
             onUpdateDimensions={onUpdateDimensions}

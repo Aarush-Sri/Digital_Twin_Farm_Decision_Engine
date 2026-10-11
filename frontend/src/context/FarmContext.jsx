@@ -55,6 +55,98 @@ export const FarmProvider = ({ children }) => {
     dispatch({ type: ACTION_TYPES.BRING_TO_FRONT, payload: { id } });
   }, []);
 
+  const undo = useCallback(() => {
+    dispatch({ type: ACTION_TYPES.UNDO });
+  }, []);
+
+  const redo = useCallback(() => {
+    dispatch({ type: ACTION_TYPES.REDO });
+  }, []);
+
+  const duplicateItem = useCallback((id) => {
+    dispatch({ type: ACTION_TYPES.DUPLICATE_ITEM, payload: { id } });
+  }, []);
+
+  const updateItemProperties = useCallback((id, properties) => {
+    dispatch({ type: ACTION_TYPES.UPDATE_ITEM_PROPERTIES, payload: { id, properties } });
+  }, []);
+
+  const setZoom = useCallback((zoom) => {
+    dispatch({ type: ACTION_TYPES.SET_ZOOM, payload: { zoom } });
+  }, []);
+
+  const updateFarmSettings = useCallback((settings) => {
+    dispatch({ type: ACTION_TYPES.SET_FARM_SETTINGS, payload: settings });
+  }, []);
+
+  const canUndo = (state.past?.length || 0) > 0;
+  const canRedo = (state.future?.length || 0) > 0;
+
+  const farmStats = useMemo(() => {
+    const crops = state.items.filter((i) => {
+      const type = i.type;
+      return [
+        ITEM_TYPES.WHEAT,
+        ITEM_TYPES.CARROT,
+        ITEM_TYPES.TOMATO,
+        ITEM_TYPES.CORN,
+        ITEM_TYPES.PADDY,
+        ITEM_TYPES.SUGARCANE,
+        ITEM_TYPES.BANANA,
+        ITEM_TYPES.PUMPKIN,
+        ITEM_TYPES.STRAWBERRY,
+        ITEM_TYPES.TREE,
+        ITEM_TYPES.NEEM_TREE,
+        ITEM_TYPES.MANGO_TREE,
+        ITEM_TYPES.COCONUT_TREE,
+      ].includes(type);
+    });
+
+    let totalSqM = 0;
+    const cropCounts = {};
+
+    state.items.forEach((item) => {
+      const wM = (item.width || 80) / 40;
+      const hM = (item.height || 80) / 40;
+      const area = wM * hM;
+      const isCropOrTree = [
+        ITEM_TYPES.WHEAT,
+        ITEM_TYPES.CARROT,
+        ITEM_TYPES.TOMATO,
+        ITEM_TYPES.CORN,
+        ITEM_TYPES.PADDY,
+        ITEM_TYPES.SUGARCANE,
+        ITEM_TYPES.BANANA,
+        ITEM_TYPES.PUMPKIN,
+        ITEM_TYPES.STRAWBERRY,
+        ITEM_TYPES.TREE,
+        ITEM_TYPES.NEEM_TREE,
+        ITEM_TYPES.MANGO_TREE,
+        ITEM_TYPES.COCONUT_TREE,
+      ].includes(item.type);
+
+      if (isCropOrTree) {
+        totalSqM += area;
+        const label = item.type.replace('_', ' ').toUpperCase();
+        cropCounts[label] = (cropCounts[label] || 0) + 1;
+      }
+    });
+
+    const totalAcres = Number((totalSqM / 4046.86).toFixed(3));
+    const totalHectares = Number((totalSqM / 10000).toFixed(3));
+    const cropSummary = Object.entries(cropCounts)
+      .map(([name, count]) => `${name} (${count})`)
+      .join(', ');
+
+    return {
+      cropsCount: crops.length,
+      totalCultivatedSqM: Number(totalSqM.toFixed(1)),
+      totalCultivatedAcres: totalAcres,
+      totalCultivatedHectares: totalHectares,
+      cropSummary,
+    };
+  }, [state.items]);
+
   const selectedItem = useMemo(() => {
     return state.items.find((item) => item.id === state.selectedId) || null;
   }, [state.items, state.selectedId]);
@@ -699,6 +791,9 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
   const value = useMemo(() => ({
     ...state,
     selectedItem,
+    canUndo,
+    canRedo,
+    farmStats,
     // Canvas actions
     addItem,
     updatePosition,
@@ -706,10 +801,16 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     selectItem,
     deselectAll,
     deleteItem,
+    duplicateItem,
+    updateItemProperties,
     clearCanvas,
     toggleSnap,
     bringToFront,
     snapCoordinate,
+    undo,
+    redo,
+    setZoom,
+    updateFarmSettings,
     // Backend & simulation actions
     connectBackend,
     syncCanvasToBackend,
@@ -720,16 +821,25 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
   }), [
     state,
     selectedItem,
+    canUndo,
+    canRedo,
+    farmStats,
     addItem,
     updatePosition,
     updateDimensions,
     selectItem,
     deselectAll,
     deleteItem,
+    duplicateItem,
+    updateItemProperties,
     clearCanvas,
     toggleSnap,
     bringToFront,
     snapCoordinate,
+    undo,
+    redo,
+    setZoom,
+    updateFarmSettings,
     connectBackend,
     syncCanvasToBackend,
     stepSimulation,

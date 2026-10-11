@@ -19,10 +19,11 @@ describe('Farm Item Definitions & Scale Logic', () => {
     });
   });
 
-  it('enforces realistic starting sizes (1x1 tree, 2x2 crops/grass, thin long fence)', () => {
+  it('enforces realistic starting sizes (2x2 tree point icon, 2x2 crops/grass, thin long fence)', () => {
     const tree = getItemDefinition(ITEM_TYPES.TREE);
-    expect(tree.defaultWidth).toBe(40); // 1.0m
-    expect(tree.defaultHeight).toBe(40); // 1.0m
+    expect(tree.defaultWidth).toBe(80); // 2.0m point icon
+    expect(tree.defaultHeight).toBe(80); // 2.0m point icon
+    expect(tree.isPointIcon).toBe(true);
 
     const wheat = getItemDefinition(ITEM_TYPES.WHEAT);
     expect(wheat.defaultWidth).toBe(80); // 2.0m

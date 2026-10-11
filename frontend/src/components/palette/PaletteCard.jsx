@@ -11,7 +11,9 @@ import {
   Warehouse,
   Footprints,
   GripVertical,
-  Plus
+  Plus,
+  Lock,
+  Maximize2
 } from 'lucide-react';
 
 import { pxToMeters } from '../../types/farm';
@@ -39,15 +41,18 @@ export const PaletteCard = ({ itemDef, onQuickAdd }) => {
       defaultHeight: itemDef.defaultHeight,
       minWidth: itemDef.minWidth,
       minHeight: itemDef.minHeight,
+      isPointIcon: Boolean(itemDef.isPointIcon),
     }));
     e.dataTransfer.effectAllowed = 'copy';
   };
+
+  const isPoint = Boolean(itemDef.isPointIcon);
 
   return (
     <div
       draggable
       onDragStart={handleDragStart}
-      className="group relative flex items-center p-2.5 rounded-xl border border-amber-950/60 bg-gradient-to-b from-stone-900/90 to-stone-950/95 hover:border-amber-600/80 hover:from-stone-900 hover:to-amber-950/30 transition-all duration-200 cursor-grab active:cursor-grabbing shadow-md hover:shadow-amber-950/30 select-none"
+      className="group relative flex items-center p-2.5 rounded-xl border border-stone-800/80 bg-gradient-to-b from-stone-900/90 to-stone-950/95 hover:border-amber-500/70 hover:from-stone-900 hover:to-amber-950/30 transition-all duration-200 cursor-grab active:cursor-grabbing shadow-md hover:shadow-amber-950/30 select-none"
     >
       {/* Thumbnail Box */}
       <div 
@@ -63,7 +68,7 @@ export const PaletteCard = ({ itemDef, onQuickAdd }) => {
             alt={itemDef.label} 
             className="w-full h-full object-cover pixel-crisp"
             style={{
-              objectFit: itemDef.type === 'tree' || itemDef.type === 'fence' ? 'contain' : 'cover'
+              objectFit: itemDef.type === 'tree' || itemDef.type.includes('tree') || itemDef.type === 'fence' ? 'contain' : 'cover'
             }}
           />
         ) : (
@@ -71,7 +76,7 @@ export const PaletteCard = ({ itemDef, onQuickAdd }) => {
         )}
 
         {/* Mini category badge */}
-        <div className="absolute bottom-0 inset-x-0 bg-black/70 text-[8px] font-mono text-center text-zinc-300 py-0.2">
+        <div className="absolute bottom-0 inset-x-0 bg-black/75 text-[8px] font-mono text-center text-amber-200/90 py-0.2 tracking-tight">
           {itemDef.category}
         </div>
       </div>
@@ -82,8 +87,25 @@ export const PaletteCard = ({ itemDef, onQuickAdd }) => {
           <h4 className="text-xs font-bold text-amber-100 group-hover:text-amber-300 tracking-wide truncate">
             {itemDef.label}
           </h4>
-          <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-800/50">
-            {pxToMeters(itemDef.defaultWidth)} × {pxToMeters(itemDef.defaultHeight)}
+          <span 
+            className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border flex items-center space-x-1 ${
+              isPoint 
+                ? 'text-cyan-300 bg-cyan-950/80 border-cyan-700/60' 
+                : 'text-emerald-400 bg-emerald-950/70 border-emerald-800/50'
+            }`}
+            title={isPoint ? 'Point icon: Fixed 2m × 2m shape' : 'Area plot: Freely resizable'}
+          >
+            {isPoint ? (
+              <>
+                <Lock className="w-2.5 h-2.5 text-cyan-400 inline mr-0.5" />
+                <span>2m × 2m</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-2.5 h-2.5 text-emerald-400 inline mr-0.5" />
+                <span>{pxToMeters(itemDef.defaultWidth)} × {pxToMeters(itemDef.defaultHeight)}</span>
+              </>
+            )}
           </span>
         </div>
         <p className="text-[11px] text-stone-400 line-clamp-1 mt-0.5 font-sans">
