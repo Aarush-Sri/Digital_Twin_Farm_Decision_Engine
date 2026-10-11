@@ -1,8 +1,21 @@
+from pathlib import Path
 import os
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-load_dotenv()
+# Search for .env in current directory, backend directory, or project root
+_possible_env_paths = [
+    Path.cwd() / ".env",
+    Path(__file__).resolve().parent.parent / ".env",
+    Path(__file__).resolve().parent.parent.parent / ".env",
+]
+for _p in _possible_env_paths:
+    if _p.is_file():
+        load_dotenv(_p, override=True)
+        break
+else:
+    load_dotenv(override=True)
+
 
 
 class Settings(BaseModel):
