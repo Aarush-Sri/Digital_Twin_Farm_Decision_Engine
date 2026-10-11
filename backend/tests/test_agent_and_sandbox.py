@@ -70,3 +70,38 @@ async def test_agent_run_loop():
     assert resp.final_response is not None
     assert len(resp.execution_steps) > 0
     assert resp.provider_used in ["gemini", "ollama", "rule_based_fallback"]
+
+
+@pytest.mark.asyncio
+async def test_agent_run_with_frontend_farm_context():
+    engine = SimulationEngine()
+    agent = AgricultureAgent(engine=engine)
+    frontend_context = {
+        "canvas_scale": {"pixels_per_meter": 40, "grid_snap_m": 0.5},
+        "total_items": 2,
+        "active_model": {"label": "Llama 3.2 (1B)", "provider": "Local Ollama", "is_local": True},
+        "ui_patch_details": {
+            "title": "GreenTwin",
+            "active_tab": "scenarios",
+            "selected_scenario": {
+                "title": "Drought",
+                "subtitle": "Less rainfall for 14 days",
+                "yieldDelta": "-12%",
+                "waterDemand": "Higher",
+            },
+        },
+        "items_2d": [
+            {"id": "w1", "type": "wheat", "x_m": 2.0, "y_m": 2.0, "width_m": 4.0, "height_m": 4.0, "nearest_water_dist_m": 2.0, "category": "Crops"},
+            {"id": "p1", "type": "water", "x_m": 8.0, "y_m": 2.0, "width_m": 2.0, "height_m": 2.0, "nearest_water_dist_m": 0.0, "category": "Irrigation"},
+        ],
+    }
+
+    resp = await agent.run(
+        user_prompt="Explain how the 14-day drought affects my wheat plot given water distance.",
+        frontend_farm_context=frontend_context,
+    )
+
+    assert resp.final_response is not None
+    assert len(resp.execution_steps) > 0
+    assert resp.provider_used in ["gemini", "ollama", "rule_based_fallback"]
+

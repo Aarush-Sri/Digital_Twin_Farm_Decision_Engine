@@ -266,6 +266,8 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
       preferredProvider,
       model: activeModel,
       geminiApiKey: apiKey,
+      activeTab,
+      selectedScenario,
     });
 
     if (result.success && result.data) {
@@ -323,12 +325,12 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
       <div className="p-4 border-b border-amber-950/80 flex items-center justify-between bg-stone-950/90 shadow-md">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600 to-amber-900 border-2 border-amber-400 flex items-center justify-center text-amber-100 shadow-md">
-            <Bot className="w-5 h-5 drop-shadow" />
+            {showConfig ? <Settings2 className="w-5 h-5 drop-shadow" /> : <Bot className="w-5 h-5 drop-shadow" />}
           </div>
           <div>
             <div className="flex items-center space-x-2">
               <h3 className="text-sm font-extrabold text-amber-200 tracking-wide font-sans">
-                AI Agronomist
+                {showConfig ? 'AI Settings & Models' : 'AI Agronomist'}
               </h3>
               {/* Active Model Pill Badge with Pulsing Live Indicator */}
               <div 
@@ -343,36 +345,40 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
               </div>
             </div>
             <p className="text-[11px] text-stone-400">
-              Provider: <span className="text-emerald-400/95 font-medium">{effectiveActiveModel.providerLabel}</span> • Simulating farm plot what-if scenarios
+              {showConfig ? 'Configure local neural models, cloud API, and providers' : `Provider: ${effectiveActiveModel.providerLabel} • Simulating farm plot what-if scenarios`}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center space-x-1.5">
           <button
             onClick={() => setShowConfig(!showConfig)}
-            className={`p-2 rounded-lg text-xs transition-all border ${
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border flex items-center space-x-1.5 ${
               showConfig || apiKey
-                ? 'text-amber-300 bg-amber-950/70 border-amber-600/80' 
+                ? 'text-amber-200 bg-amber-950/80 border-amber-500 shadow-sm' 
                 : 'text-stone-400 hover:text-amber-200 hover:bg-stone-800 border-stone-800'
             }`}
-            title="Configure AI Models (Llama 3.2 / Qwen 3.5 / Gemini)"
+            title={showConfig ? 'Done / Return to Chat' : 'Configure AI Models (Llama 3.2 / Qwen 3.5 / Gemini)'}
           >
-            <Settings2 className="w-4 h-4" />
+            <Settings2 className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-sans">{showConfig ? 'Done' : 'Settings'}</span>
           </button>
           <button
             onClick={onClose}
             className="p-2 rounded-lg text-stone-400 hover:text-amber-200 hover:bg-stone-800 transition-all"
+            title="Close Panel"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* AI Configuration Drawer Panel */}
-      {showConfig && (
-        <div className="p-3.5 bg-stone-900 border-b border-amber-950 text-xs space-y-3">
-          <div className="flex items-center justify-between">
+      {showConfig ? (
+        /* ======================================================== */
+        /* DEDICATED FULL-PANEL AI SETTINGS VIEW */
+        /* ======================================================== */
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+          <div className="flex items-center justify-between pb-1 border-b border-amber-950/60">
             <span className="font-bold text-amber-200 flex items-center space-x-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               <span>AI Engine & Model Selection</span>
@@ -381,7 +387,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
           </div>
 
           {/* Active AI Model Status Banner */}
-          <div className="p-2.5 rounded-xl bg-gradient-to-r from-emerald-950/80 via-stone-900 to-emerald-950/60 border border-emerald-500/70 flex items-center justify-between shadow-inner">
+          <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-950/80 via-stone-900 to-emerald-950/60 border border-emerald-500/70 flex items-center justify-between shadow-inner">
             <div className="flex items-center space-x-2.5">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -401,16 +407,16 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
                 </div>
               </div>
             </div>
-            <span className="text-[10px] uppercase font-mono font-bold px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/60 shadow-sm flex items-center space-x-1">
+            <span className="text-[10px] uppercase font-mono font-bold px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/60 shadow-sm flex items-center space-x-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
               <span>ACTIVE</span>
             </span>
           </div>
 
           {/* Provider Selection */}
-          <div className="space-y-1">
+          <div className="space-y-1.5 p-3 rounded-xl bg-stone-900/60 border border-stone-800">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] font-medium text-stone-300">Preferred AI Provider:</label>
+              <label className="text-[11px] font-semibold text-stone-300">Preferred AI Provider:</label>
               <span className="text-[10px] font-mono text-emerald-400 font-bold">
                 Active: {preferredProvider.toUpperCase()}
               </span>
@@ -419,7 +425,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
               <button
                 type="button"
                 onClick={() => savePreferredProvider('auto')}
-                className={`py-1.5 px-2 rounded border transition-all flex items-center justify-center space-x-1 ${
+                className={`py-2 px-2 rounded-lg border transition-all flex items-center justify-center space-x-1 ${
                   preferredProvider === 'auto'
                     ? 'bg-amber-950 border-amber-500 text-amber-200 font-bold shadow-sm'
                     : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
@@ -435,7 +441,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
               <button
                 type="button"
                 onClick={() => savePreferredProvider('ollama')}
-                className={`py-1.5 px-2 rounded border transition-all flex items-center justify-center space-x-1 ${
+                className={`py-2 px-2 rounded-lg border transition-all flex items-center justify-center space-x-1 ${
                   preferredProvider === 'ollama'
                     ? 'bg-amber-950 border-amber-500 text-amber-200 font-bold shadow-sm'
                     : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
@@ -451,7 +457,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
               <button
                 type="button"
                 onClick={() => savePreferredProvider('gemini')}
-                className={`py-1.5 px-2 rounded border transition-all flex items-center justify-center space-x-1 ${
+                className={`py-2 px-2 rounded-lg border transition-all flex items-center justify-center space-x-1 ${
                   preferredProvider === 'gemini'
                     ? 'bg-amber-950 border-amber-500 text-amber-200 font-bold shadow-sm'
                     : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
@@ -469,19 +475,19 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
 
           {/* Local Ollama Model Picker */}
           {(preferredProvider === 'ollama' || preferredProvider === 'auto') && (
-            <div className="space-y-1.5 pt-2 border-t border-stone-800/80">
+            <div className="space-y-2 p-3 rounded-xl bg-stone-900/60 border border-stone-800">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-stone-300">Local Neural Model:</span>
+                <span className="text-[11px] font-semibold text-stone-300">Local Neural Model:</span>
                 <span className="text-[10px] font-mono text-emerald-400 font-bold flex items-center space-x-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
                   <span>Active: {localModel}</span>
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => saveLocalModel('llama3.2:1b')}
-                  className={`py-1.5 px-2.5 rounded text-[11px] font-mono border transition-all flex items-center justify-between ${
+                  className={`py-2 px-3 rounded-lg text-[11px] font-mono border transition-all flex items-center justify-between ${
                     localModel.includes('1b') || localModel.includes('3.2')
                       ? 'bg-emerald-950 border-emerald-500 text-emerald-200 font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]'
                       : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
@@ -503,7 +509,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
                 <button
                   type="button"
                   onClick={() => saveLocalModel('qwen3.5:latest')}
-                  className={`py-1.5 px-2.5 rounded text-[11px] font-mono border transition-all flex items-center justify-between ${
+                  className={`py-2 px-3 rounded-lg text-[11px] font-mono border transition-all flex items-center justify-between ${
                     localModel.includes('qwen')
                       ? 'bg-emerald-950 border-emerald-500 text-emerald-200 font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]'
                       : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
@@ -528,7 +534,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
                   <select
                     value={localModel}
                     onChange={(e) => saveLocalModel(e.target.value)}
-                    className="w-full bg-stone-950 border border-stone-800 text-stone-300 text-[10px] rounded px-2 py-1"
+                    className="w-full bg-stone-950 border border-stone-800 text-stone-300 text-[10px] rounded px-2.5 py-1.5"
                   >
                     {installedModels.map((m) => (
                       <option key={m} value={m}>{m} {m === localModel ? '(Active)' : ''}</option>
@@ -541,14 +547,14 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
 
           {/* Google Gemini Settings */}
           {(preferredProvider === 'gemini' || preferredProvider === 'auto') && (
-            <div className="space-y-2 pt-2 border-t border-stone-800/80">
+            <div className="space-y-2 p-3 rounded-xl bg-stone-900/60 border border-stone-800">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-stone-300">Gemini Cloud API:</span>
+                <span className="text-[11px] font-semibold text-stone-300">Gemini Cloud API:</span>
                 <div className="flex items-center space-x-1.5">
                   <select
                     value={geminiModel}
                     onChange={(e) => saveGeminiModel(e.target.value)}
-                    className="bg-stone-950 border border-stone-800 text-amber-300 text-[10px] rounded px-1.5 py-0.5"
+                    className="bg-stone-950 border border-stone-800 text-amber-300 text-[10px] rounded px-2 py-1"
                   >
                     <option value="gemini-2.5-flash">gemini-2.5-flash</option>
                     <option value="gemini-2.0-flash">gemini-2.0-flash</option>
@@ -566,12 +572,27 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
                 value={apiKey}
                 onChange={(e) => saveApiKey(e.target.value)}
                 placeholder="AIzaSy... (leave blank to use backend .env)"
-                className="w-full bg-stone-950 border border-amber-900/80 rounded px-2.5 py-1.5 text-xs text-amber-100 placeholder-stone-600 focus:outline-none focus:border-amber-500"
+                className="w-full bg-stone-950 border border-amber-900/80 rounded px-3 py-2 text-xs text-amber-100 placeholder-stone-600 focus:outline-none focus:border-amber-500 font-mono"
               />
+              <p className="text-[10px] text-stone-500">
+                Custom Gemini API keys are securely cached in your local session.
+              </p>
             </div>
           )}
+
+          {/* Back to Chat / Done Button */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setShowConfig(false)}
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-stone-950 font-bold text-xs tracking-wide shadow-md transition-all active:scale-95 flex items-center justify-center space-x-2"
+            >
+              <span>Done & Return to Chat</span>
+            </button>
+          </div>
         </div>
-      )}
+      ) : (
+        <>
 
       {/* Tab Switcher: Simulation Panel vs Freeform Chat */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-amber-950/80 bg-stone-900/60 flex-shrink-0">
@@ -603,40 +624,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
         </div>
       </div>
 
-      {/* Suggested Quick Prompts (RPG Quest / What-If Scenarios) */}
-      <div className="px-3.5 py-2.5 bg-stone-950/80 border-b border-amber-950/80 flex items-center space-x-2 overflow-x-auto text-xs no-scrollbar flex-shrink-0">
-        <button
-          onClick={() => handleSend('Inspect current crop health and soil moisture')}
-          className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-950/70 text-emerald-200 hover:bg-emerald-900 border border-emerald-700/60 transition-all shadow-sm"
-        >
-          <Sprout className="w-3 h-3 text-emerald-400" />
-          <span>Health Check</span>
-        </button>
 
-        <button
-          onClick={() => handleSend('Apply drip irrigation across dry crop tiles to balance moisture')}
-          className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-sky-950/70 text-sky-200 hover:bg-sky-900 border border-sky-700/60 transition-all shadow-sm"
-        >
-          <Droplets className="w-3 h-3 text-sky-400" />
-          <span>💧 Apply Irrigation</span>
-        </button>
-
-        <button
-          onClick={() => handleSend('Simulate a 14-day drought scenario: what happens to crop yield without rain?')}
-          className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-950/70 text-amber-200 hover:bg-amber-900 border border-amber-700/60 transition-all shadow-sm"
-        >
-          <Flame className="w-3 h-3 text-orange-400" />
-          <span>🔥 14-Day Drought What-If</span>
-        </button>
-
-        <button
-          onClick={() => handleSend('Compare wheat vs carrot crop yield and water efficiency for this layout')}
-          className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-stone-800 text-stone-200 hover:bg-stone-700 border border-stone-600 transition-all shadow-sm"
-        >
-          <Scale className="w-3 h-3 text-yellow-400" />
-          <span>🌾 Yield & Comparison</span>
-        </button>
-      </div>
 
       {/* ======================================================== */}
       {/* VIEW 1: DEDICATED SIMULATION PANEL */}
@@ -948,7 +936,9 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
         </button>
       </form>
     </div>
-  </div>
+  </>
+  )}
+</div>
 
   {/* Scenario Comparison Modal */}
   <ScenarioComparisonModal

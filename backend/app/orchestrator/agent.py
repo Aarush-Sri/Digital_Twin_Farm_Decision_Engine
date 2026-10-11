@@ -39,6 +39,7 @@ class AgricultureAgent:
         user_prompt: str,
         chat_history: Optional[List[Dict[str, str]]] = None,
         max_steps: int = 5,
+        frontend_farm_context: Optional[Dict[str, Any]] = None,
     ) -> AgentResponse:
         """Executes multi-step deliberation, tool invocation, and final response generation."""
         farm_summary = self.engine.get_summary()
@@ -66,6 +67,33 @@ class AgricultureAgent:
             f"\n- Fallow/Open Turf: {fallow_count} tiles"
         )
 
+        frontend_context_desc = ""
+        if frontend_farm_context:
+            items_2d = frontend_farm_context.get("items_2d", [])
+            ui_patch = frontend_farm_context.get("ui_patch_details", {})
+            active_mod = frontend_farm_context.get("active_model", {})
+
+            item_lines = []
+            for it in items_2d[:24]:
+                line = f"• {it.get('category', 'Item')} '{it.get('type')}' at ({it.get('x_m')}m, {it.get('y_m')}m), size {it.get('width_m')}m×{it.get('height_m')}m"
+                if it.get("nearest_water_dist_m") is not None:
+                    line += f", water dist: {it.get('nearest_water_dist_m')}m"
+                item_lines.append(line)
+
+            selected_sc = ui_patch.get("selected_scenario")
+            sc_info = "None"
+            if selected_sc:
+                sc_info = f"{selected_sc.get('title')} ({selected_sc.get('subtitle')}) - Yield Impact: {selected_sc.get('yieldDelta', 'N/A')}, Water: {selected_sc.get('waterDemand', 'N/A')}"
+
+            frontend_context_desc = (
+                f"\n=== 2D VISUAL FARM CANVAS & SPATIAL TOPOLOGY (Frontend Patch) ===\n"
+                f"- Active AI Model in UI: {active_mod.get('label', 'Default')} ({active_mod.get('provider', 'N/A')})\n"
+                f"- UI Active Tab: {ui_patch.get('active_tab', 'chat')}\n"
+                f"- Active Simulation Scenario: {sc_info}\n"
+                f"- Placed 2D Canvas Items ({len(items_2d)} total items, scale: 40px = 1m):\n"
+                f"  " + ("\n  ".join(item_lines) if item_lines else "None") + "\n"
+            )
+
         context_prompt = (
             f"{AGRONOMIST_SYSTEM_PROMPT}\n\n"
             f"=== CURRENT LIVE FARM STATE & PLOT LAYOUT ===\n"
@@ -80,6 +108,7 @@ class AgricultureAgent:
             f"ET0={farm_summary['environment']['et0_mm']} mm/day, Humidity={farm_summary['environment']['humidity_pct']}%\n\n"
             f"=== LIVE PLOT DETAILS ===\n"
             f"{plot_detail}\n"
+            f"{frontend_context_desc}"
         )
 
         messages: List[LLMMessage] = [

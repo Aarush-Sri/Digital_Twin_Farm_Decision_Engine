@@ -1,6 +1,6 @@
 import React, { createContext, useReducer, useMemo, useCallback, useEffect, useState } from 'react';
 import { farmReducer, INITIAL_STATE, ACTION_TYPES, getInitialFarmItems } from './farmReducer';
-import { GRID_SIZE, ITEM_TYPES } from '../types/farm';
+import { GRID_SIZE, ITEM_TYPES, getItemDefinition } from '../types/farm';
 import { DEFAULT_PRESET_FARM, PRESET_FARMS } from '../types/presetFarm';
 import { apiClient } from '../api/apiClient';
 
@@ -375,30 +375,51 @@ export const FarmProvider = ({ children }) => {
 
     try {
       // Map canvas items to grid coordinates (40px = 1m = 1 tile)
+      const CROP_MAP = {
+        [ITEM_TYPES.WHEAT]: 'wheat',
+        [ITEM_TYPES.CARROT]: 'carrot',
+        [ITEM_TYPES.TOMATO]: 'tomato',
+        [ITEM_TYPES.CORN]: 'corn',
+        [ITEM_TYPES.PADDY]: 'wheat',
+        [ITEM_TYPES.SUGARCANE]: 'corn',
+        [ITEM_TYPES.BANANA]: 'soybean',
+        [ITEM_TYPES.PUMPKIN]: 'potato',
+        [ITEM_TYPES.STRAWBERRY]: 'lettuce',
+      };
+
       for (const item of state.items) {
         const startX = Math.max(0, Math.floor(item.x / 40));
         const startY = Math.max(0, Math.floor(item.y / 40));
         const endX = Math.max(startX, Math.floor((item.x + item.width - 1) / 40));
         const endY = Math.max(startY, Math.floor((item.y + item.height - 1) / 40));
 
-        if (item.type === ITEM_TYPES.WHEAT || item.type === ITEM_TYPES.CARROT) {
-          const cropType = item.type === ITEM_TYPES.WHEAT ? 'wheat' : 'carrot';
+        const backendCrop = CROP_MAP[item.type];
+        if (backendCrop) {
           await apiClient.batchPlant(state.farmId, {
-            cropType,
+            cropType: backendCrop,
             startX: Math.min(startX, 9),
             startY: Math.min(startY, 9),
             endX: Math.min(endX, 9),
             endY: Math.min(endY, 9),
           });
-        } else if (item.type === ITEM_TYPES.WATER) {
-          // Set irrigation for this area
+        } else if (
+          item.type === ITEM_TYPES.WATER || 
+          item.type === ITEM_TYPES.POND || 
+          item.type === ITEM_TYPES.WELL || 
+          item.type === ITEM_TYPES.SPRINKLER || 
+          item.type === ITEM_TYPES.PIPE
+        ) {
+          const isSprinkler = item.type === ITEM_TYPES.SPRINKLER;
+          const rateMm = isSprinkler ? 10.0 : 8.0;
+          const irrType = isSprinkler ? 'sprinkler' : 'drip';
+
           for (let x = Math.min(startX, 9); x <= Math.min(endX, 9); x++) {
             for (let y = Math.min(startY, 9); y <= Math.min(endY, 9); y++) {
               await apiClient.updateTile(state.farmId, {
                 x,
                 y,
-                irrigationType: 'drip',
-                irrigationRateMm: 8.0,
+                irrigationType: irrType,
+                irrigationRateMm: rateMm,
                 soilMoisturePct: 80.0,
               });
             }
@@ -947,6 +968,65 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
   };
 
   /**
+   * Build complete 2D Farm spatial topology and UI patch details
+   */
+  const buildFrontendFarmContext = useCallback((options = {}) => {
+    const waterSources = state.items.filter((i) => 
+      i.type === ITEM_TYPES.WATER || 
+      i.type === ITEM_TYPES.POND || 
+      i.type === ITEM_TYPES.WELL || 
+      i.type === ITEM_TYPES.SPRINKLER
+    );
+
+    return {
+      canvas_scale: { pixels_per_meter: 40, grid_snap_m: 0.5 },
+      farm_name: state.farmName || 'GreenTwin Farm',
+      current_day: state.currentDay,
+      total_items: state.items.length,
+      active_model: {
+        label: activeAiModel.label,
+        provider: activeAiModel.providerLabel,
+        is_local: activeAiModel.isLocal,
+      },
+      ui_patch_details: {
+        title: 'GreenTwin',
+        theme: 'Minimal Dark Agronomy',
+        active_tab: options.activeTab || 'chat',
+        selected_scenario: options.selectedScenario || null,
+        has_simulation_panel: true,
+        has_scenario_comparison_modal: true,
+      },
+      items_2d: state.items.map((item) => {
+        const x_m = Number((item.x / 40).toFixed(2));
+        const y_m = Number((item.y / 40).toFixed(2));
+        const w_m = Number((item.width / 40).toFixed(2));
+        const h_m = Number((item.height / 40).toFixed(2));
+
+        let nearestWaterDistM = null;
+        if (waterSources.length > 0) {
+          const distances = waterSources.map((w) => {
+            const wx = w.x / 40;
+            const wy = w.y / 40;
+            return Math.hypot(wx - x_m, wy - y_m);
+          });
+          nearestWaterDistM = Number(Math.min(...distances).toFixed(2));
+        }
+
+        return {
+          id: item.id,
+          type: item.type,
+          x_m,
+          y_m,
+          width_m: w_m,
+          height_m: h_m,
+          nearest_water_dist_m: nearestWaterDistM,
+          category: getItemDefinition(item.type)?.category || 'Other',
+        };
+      }),
+    };
+  }, [state.items, state.farmName, state.currentDay, activeAiModel]);
+
+  /**
    * Send user prompt to Autonomous AI Agronomist Agent
    */
   const sendAgentChat = useCallback(async (prompt, chatHistory = [], maxSteps = 5, options = {}) => {
@@ -964,6 +1044,8 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
           await syncCanvasToBackend();
         }
 
+        const frontendFarmContext = buildFrontendFarmContext(options);
+
         const response = await apiClient.sendAgentChat(state.farmId, {
           prompt,
           chatHistory,
@@ -971,6 +1053,7 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
           geminiApiKey: effectiveGeminiKey || null,
           model,
           preferredProvider,
+          frontendFarmContext,
         });
 
         // Refresh farm state after agent execution
@@ -1105,6 +1188,7 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     stepSimulation,
     runWhatIf,
     sendAgentChat,
+    buildFrontendFarmContext,
     saveFarmSnapshot,
     updateFarmProfile,
     // AI Configuration and Active Model
@@ -1145,6 +1229,7 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     stepSimulation,
     runWhatIf,
     sendAgentChat,
+    buildFrontendFarmContext,
     saveFarmSnapshot,
     updateFarmProfile,
     aiProvider,

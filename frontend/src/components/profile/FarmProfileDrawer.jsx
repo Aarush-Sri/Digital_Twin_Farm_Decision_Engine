@@ -242,7 +242,7 @@ export const FarmProfileDrawer = ({ isOpen, onClose }) => {
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-sm font-bold text-zinc-100">Farm Plot Profile</h2>
+                <h2 className="text-sm font-bold text-zinc-100">Farm Profile</h2>
                 <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
                   Universal Config
                 </span>

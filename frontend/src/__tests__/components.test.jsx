@@ -29,17 +29,22 @@ describe('Farm UI Components', () => {
     expect(mockQuickAdd).toHaveBeenCalledWith(grassDef);
   });
 
-  it('renders Header with clean AI title, Preset Farm, and active AI model badge', () => {
+  it('renders Header with clean AI title, Profile button, Preset Farm, and active AI model badge', () => {
+    const mockOpenProfile = vi.fn();
     render(
       <FarmProvider>
-        <Header />
+        <Header onOpenProfile={mockOpenProfile} />
       </FarmProvider>
     );
 
     expect(screen.getByText('GreenTwin')).toBeInTheDocument();
+    expect(screen.getByText('Profile')).toBeInTheDocument();
     expect(screen.getByText('Preset Farm')).toBeInTheDocument();
     expect(screen.getByText(/⚡ Ask AI/)).toBeInTheDocument();
     expect(screen.getByText(/Llama 3.2/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Profile'));
+    expect(mockOpenProfile).toHaveBeenCalled();
   });
 
   it('renders Sidebar with all 6 farm items', () => {
@@ -84,7 +89,7 @@ describe('Farm UI Components', () => {
     expect(screen.getByText(/NPK Fertilizer Boost/)).toBeInTheDocument();
   });
 
-  it('renders AgentChatDrawer when open and shows multi-step console and active AI model indication', () => {
+  it('renders AgentChatDrawer with Simulation Panel, AI settings, and active model indication', () => {
     render(
       <FarmProvider>
         <AgentChatDrawer isOpen={true} onClose={vi.fn()} />
@@ -92,9 +97,24 @@ describe('Farm UI Components', () => {
     );
 
     expect(screen.getByText('AI Agronomist')).toBeInTheDocument();
-    expect(screen.getByText('Health Check')).toBeInTheDocument();
+    expect(screen.getByText('Simulation Panel')).toBeInTheDocument();
+    expect(screen.getByText(/Chat/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Active AI Model:/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Llama 3.2/i).length).toBeGreaterThan(0);
+
+    // Open Settings: should NOT show the chat page or simulation tab switcher
+    const settingsBtn = screen.getByRole('button', { name: /settings/i });
+    fireEvent.click(settingsBtn);
+
+    expect(screen.getByText('AI Settings & Models')).toBeInTheDocument();
+    expect(screen.getByText('Preferred AI Provider:')).toBeInTheDocument();
+    expect(screen.queryByText('Simulation Panel')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Ask about crops/i)).not.toBeInTheDocument();
+
+    // Click Done to return to chat
+    fireEvent.click(screen.getByText(/Done & Return to Chat/i));
+    expect(screen.getByText('Simulation Panel')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Ask about crops/i)).toBeInTheDocument();
   });
 
   it('updates dimensions from DimensionBadge numeric inputs and presets', () => {
@@ -145,7 +165,7 @@ describe('Farm UI Components', () => {
       </FarmProvider>
     );
 
-    expect(screen.getByText('Farm Plot Profile')).toBeInTheDocument();
+    expect(screen.getByText('Farm Profile')).toBeInTheDocument();
     expect(screen.getByText('Universal Config')).toBeInTheDocument();
 
     // Verify side navigation tabs

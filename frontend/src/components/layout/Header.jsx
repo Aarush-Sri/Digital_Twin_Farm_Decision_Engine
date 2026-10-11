@@ -2,10 +2,11 @@ import React from 'react';
 import { useFarm } from '../../hooks/useFarm';
 import { 
   Sparkles,
-  LayoutTemplate
+  LayoutTemplate,
+  SlidersHorizontal
 } from 'lucide-react';
 
-export const Header = ({ onOpenAgentChat }) => {
+export const Header = ({ onOpenAgentChat, onOpenProfile }) => {
   const { 
     loadPresetFarm,
     items,
@@ -24,8 +25,21 @@ export const Header = ({ onOpenAgentChat }) => {
         </h1>
       </div>
 
-      {/* Right Controls: Only Preset Farm and AI */}
+      {/* Right Controls: Profile, Preset Farm and AI */}
       <div className="flex items-center space-x-3">
+        {/* Profile Button */}
+        {onOpenProfile && (
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-stone-900 text-stone-300 border border-stone-800 hover:border-emerald-600/70 hover:text-emerald-300 hover:bg-stone-800 transition-all shadow-sm active:scale-95"
+            title="Open Farm Profile (Soil, Climate, Hydrology & Geography)"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Profile</span>
+          </button>
+        )}
+
         {/* Preset Farm Button */}
         <button
           type="button"
