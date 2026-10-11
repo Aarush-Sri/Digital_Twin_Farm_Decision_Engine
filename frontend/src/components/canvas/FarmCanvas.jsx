@@ -281,10 +281,10 @@ export const FarmCanvas = () => {
     // Only deselect if clicked directly on canvas background or transform container
     if (
       e.target === canvasRef.current || 
-      e.target.classList.contains('farm-canvas-grid') ||
-      e.target.classList.contains('canvas-background') ||
-      e.target.classList.contains('canvas-transform-layer') ||
-      e.target.classList.contains('canvas-sizer-layer')
+      e.target.classList?.contains('farm-canvas-grid') ||
+      e.target.classList?.contains('canvas-background') ||
+      e.target.classList?.contains('canvas-transform-layer') ||
+      e.target.classList?.contains('canvas-sizer-layer')
     ) {
       deselectAll();
     }

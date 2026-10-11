@@ -41,7 +41,7 @@ describe('Farm UI Components', () => {
     expect(screen.getByText('Profile')).toBeInTheDocument();
     expect(screen.getByText('Preset Farm')).toBeInTheDocument();
     expect(screen.getByText(/⚡ Ask AI/)).toBeInTheDocument();
-    expect(screen.getByText(/Llama 3.2/)).toBeInTheDocument();
+    expect(screen.getByText(/Qwen 3.5|Llama 3.2/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Profile'));
     expect(mockOpenProfile).toHaveBeenCalled();
@@ -122,7 +122,7 @@ describe('Farm UI Components', () => {
     expect(screen.getByText('Simulation Panel')).toBeInTheDocument();
     expect(screen.getByText(/Chat/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Active AI Model:/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Llama 3.2/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Qwen 3.5|Llama 3.2/i).length).toBeGreaterThan(0);
 
     // Open Settings: should NOT show the chat page or simulation tab switcher
     const settingsBtn = screen.getByRole('button', { name: /settings/i });

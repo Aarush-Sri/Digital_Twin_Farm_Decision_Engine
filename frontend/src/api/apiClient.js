@@ -128,6 +128,18 @@ export const apiClient = {
     });
   },
 
+  async syncFarmLayout(farmId, { items = [], farmSettings = null, farmProfile = null, environment = null } = {}) {
+    return request(`/api/v1/farm/${encodeURIComponent(farmId)}/sync`, {
+      method: 'POST',
+      body: JSON.stringify({
+        items,
+        farm_settings: farmSettings,
+        farm_profile: farmProfile,
+        environment,
+      }),
+    });
+  },
+
   /**
    * Simulation Engine
    */

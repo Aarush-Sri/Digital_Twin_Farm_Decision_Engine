@@ -105,3 +105,30 @@ async def test_agent_run_with_frontend_farm_context():
     assert len(resp.execution_steps) > 0
     assert resp.provider_used in ["gemini", "ollama", "rule_based_fallback"]
 
+
+def test_inspect_plant_database_tool():
+    engine = SimulationEngine()
+    executor = ToolExecutor(engine)
+
+    # 1. Test querying a specific plant (paddy)
+    call_plant = ToolCall(
+        name="inspect_plant_database",
+        arguments={"plant_name": "paddy"},
+    )
+    res_plant = executor.execute(call_plant)
+    assert res_plant["status"] == "success"
+    assert res_plant["plant"]["name"] == "Paddy Rice"
+    assert "Basmati Super" in res_plant["plant"]["varieties"]
+    assert res_plant["plant"]["base_temp_c"] == 10.0
+    assert res_plant["plant"]["gdd_maturity"] == 1450.0
+
+    # 2. Test querying all plants
+    call_all = ToolCall(
+        name="inspect_plant_database",
+        arguments={},
+    )
+    res_all = executor.execute(call_all)
+    assert res_all["status"] == "success"
+    assert res_all["total_registered_plants"] >= 14
+
+

@@ -29,8 +29,8 @@ export const FarmProvider = ({ children }) => {
   });
   const [localModel, setLocalModelState] = useState(() => {
     return typeof window !== 'undefined'
-      ? localStorage.getItem('GREENTWIN_LOCAL_MODEL') || 'llama3.2:1b'
-      : 'llama3.2:1b';
+      ? localStorage.getItem('GREENTWIN_LOCAL_MODEL') || 'qwen3.5:latest'
+      : 'qwen3.5:latest';
   });
   const [geminiApiKey, setGeminiApiKeyState] = useState(() => {
     return typeof window !== 'undefined'
@@ -194,7 +194,7 @@ export const FarmProvider = ({ children }) => {
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         localStorage.setItem('greentwin_farm_items', JSON.stringify(state.items));
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -325,24 +325,42 @@ export const FarmProvider = ({ children }) => {
     try {
       await apiClient.checkHealth();
       
-      // Create or get active farm session
-      const createRes = await apiClient.createFarm('GreenTwin Model Farm', 10, 10);
+      // Create active farm session with generous 25x25 grid
+      const createRes = await apiClient.createFarm(state.farmSettings?.name || 'GreenTwin Model Farm', 25, 25);
       const farmId = createRes.farm_id;
-      const world = createRes.world;
-
-      // Fetch summary
+      let world = createRes.world;
       let summary = null;
-      try {
-        summary = await apiClient.getFarmSummary(farmId);
-      } catch (err) {
-        console.warn('Could not fetch farm summary:', err);
+
+      // Automatically sync loaded canvas items immediately on backend connection
+      const itemsToSync = state.items && state.items.length > 0 ? state.items : getInitialFarmItems();
+      if (itemsToSync && itemsToSync.length > 0) {
+        try {
+          const syncRes = await apiClient.syncFarmLayout(farmId, {
+            items: itemsToSync,
+            farmSettings: state.farmSettings,
+            farmProfile: state.farmProfile,
+            environment: state.environment,
+          });
+          world = syncRes.world || world;
+          summary = syncRes.summary;
+        } catch (syncErr) {
+          console.warn('Initial layout sync warning:', syncErr);
+        }
+      }
+
+      if (!summary) {
+        try {
+          summary = await apiClient.getFarmSummary(farmId);
+        } catch (err) {
+          console.warn('Could not fetch farm summary:', err);
+        }
       }
 
       dispatch({
         type: ACTION_TYPES.SET_FARM_DATA,
         payload: {
           farmId,
-          farmName: createRes.name,
+          farmName: world?.name || createRes.name,
           world,
           summary,
         },
@@ -360,7 +378,7 @@ export const FarmProvider = ({ children }) => {
       });
       return { success: false, error: err.message };
     }
-  }, []);
+  }, [state.farmSettings, state.farmProfile, state.environment, state.items]);
 
   // Auto-connect to backend on initial load
   useEffect(() => {
@@ -368,9 +386,10 @@ export const FarmProvider = ({ children }) => {
   }, [connectBackend]);
 
   /**
-   * Synchronize Canvas layout items to backend farm world grid
+   * Synchronize Canvas layout items to backend farm world atomically
    */
-  const syncCanvasToBackend = useCallback(async () => {
+  const syncCanvasToBackend = useCallback(async (customItems = null) => {
+    const itemsToSync = customItems || state.items;
     if (!state.farmId || state.backendStatus !== 'connected') {
       return { success: false, error: 'Backend not connected' };
     }
@@ -378,83 +397,31 @@ export const FarmProvider = ({ children }) => {
     dispatch({ type: ACTION_TYPES.SET_SYNCING, payload: { isSyncing: true } });
 
     try {
-      // Map canvas items to grid coordinates (40px = 1m = 1 tile)
-      const CROP_MAP = {
-        [ITEM_TYPES.WHEAT]: 'wheat',
-        [ITEM_TYPES.CARROT]: 'carrot',
-        [ITEM_TYPES.TOMATO]: 'tomato',
-        [ITEM_TYPES.CORN]: 'corn',
-        [ITEM_TYPES.PADDY]: 'wheat',
-        [ITEM_TYPES.SUGARCANE]: 'corn',
-        [ITEM_TYPES.BANANA]: 'soybean',
-        [ITEM_TYPES.PUMPKIN]: 'potato',
-        [ITEM_TYPES.STRAWBERRY]: 'lettuce',
-      };
-
-      for (const item of state.items) {
-        const startX = Math.max(0, Math.floor(item.x / 40));
-        const startY = Math.max(0, Math.floor(item.y / 40));
-        const endX = Math.max(startX, Math.floor((item.x + item.width - 1) / 40));
-        const endY = Math.max(startY, Math.floor((item.y + item.height - 1) / 40));
-
-        const backendCrop = CROP_MAP[item.type];
-        if (backendCrop) {
-          await apiClient.batchPlant(state.farmId, {
-            cropType: backendCrop,
-            startX: Math.min(startX, 9),
-            startY: Math.min(startY, 9),
-            endX: Math.min(endX, 9),
-            endY: Math.min(endY, 9),
-          });
-        } else if (
-          item.type === ITEM_TYPES.WATER || 
-          item.type === ITEM_TYPES.POND || 
-          item.type === ITEM_TYPES.WELL || 
-          item.type === ITEM_TYPES.SPRINKLER || 
-          item.type === ITEM_TYPES.PIPE
-        ) {
-          const isSprinkler = item.type === ITEM_TYPES.SPRINKLER;
-          const rateMm = isSprinkler ? 10.0 : 8.0;
-          const irrType = isSprinkler ? 'sprinkler' : 'drip';
-
-          for (let x = Math.min(startX, 9); x <= Math.min(endX, 9); x++) {
-            for (let y = Math.min(startY, 9); y <= Math.min(endY, 9); y++) {
-              await apiClient.updateTile(state.farmId, {
-                x,
-                y,
-                irrigationType: irrType,
-                irrigationRateMm: rateMm,
-                soilMoisturePct: 80.0,
-              });
-            }
-          }
-        }
-      }
-
-      // Re-fetch world state and summary after sync
-      const [updatedWorld, updatedSummary] = await Promise.all([
-        apiClient.getFarmState(state.farmId),
-        apiClient.getFarmSummary(state.farmId),
-      ]);
+      const syncRes = await apiClient.syncFarmLayout(state.farmId, {
+        items: itemsToSync,
+        farmSettings: state.farmSettings,
+        farmProfile: state.farmProfile,
+        environment: state.environment,
+      });
 
       dispatch({
         type: ACTION_TYPES.SET_FARM_DATA,
         payload: {
           farmId: state.farmId,
-          farmName: updatedWorld.name,
-          world: updatedWorld,
-          summary: updatedSummary,
+          farmName: syncRes.world?.name || state.farmName,
+          world: syncRes.world,
+          summary: syncRes.summary,
         },
       });
 
       dispatch({ type: ACTION_TYPES.SET_SYNCING, payload: { isSyncing: false } });
-      return { success: true };
+      return { success: true, summary: syncRes.summary };
     } catch (err) {
-      console.error('Failed to sync canvas to backend:', err);
+      console.warn('Failed to sync canvas to backend:', err);
       dispatch({ type: ACTION_TYPES.SET_SYNCING, payload: { isSyncing: false } });
       return { success: false, error: err.message };
     }
-  }, [state.farmId, state.backendStatus, state.items]);
+  }, [state.farmId, state.backendStatus, state.items, state.farmSettings, state.farmProfile, state.environment, state.farmName]);
 
   /**
    * Advance simulation time step by N days
@@ -561,9 +528,6 @@ export const FarmProvider = ({ children }) => {
       ITEM_TYPES.COCONUT_TREE,
     ].includes(i.type));
     const treeCount = trees.length;
-    const neemCount = state.items.filter((i) => i.type === ITEM_TYPES.NEEM_TREE).length;
-    const mangoCount = state.items.filter((i) => i.type === ITEM_TYPES.MANGO_TREE).length;
-    const coconutCount = state.items.filter((i) => i.type === ITEM_TYPES.COCONUT_TREE).length;
 
     const grassCount = state.items.filter((i) => i.type === ITEM_TYPES.GRASS).length;
     const fenceCount = state.items.filter((i) => i.type === ITEM_TYPES.FENCE).length;
@@ -763,24 +727,84 @@ export const FarmProvider = ({ children }) => {
   };
 
   /**
+   * Helper to build complete, rich context of the farm for direct browser LLMs
+   */
+  const generateDetailedFarmContextStr = () => {
+    const CROP_SET = new Set([
+      ITEM_TYPES.WHEAT, ITEM_TYPES.CARROT, ITEM_TYPES.TOMATO, ITEM_TYPES.CORN,
+      ITEM_TYPES.PADDY, ITEM_TYPES.SUGARCANE, ITEM_TYPES.BANANA, ITEM_TYPES.PUMPKIN,
+      ITEM_TYPES.STRAWBERRY
+    ]);
+    const TREE_SET = new Set([
+      ITEM_TYPES.TREE, ITEM_TYPES.NEEM_TREE, ITEM_TYPES.MANGO_TREE, ITEM_TYPES.COCONUT_TREE
+    ]);
+    const WATER_SET = new Set([
+      ITEM_TYPES.WATER, ITEM_TYPES.POND, ITEM_TYPES.WELL, ITEM_TYPES.SPRINKLER, ITEM_TYPES.PIPE
+    ]);
+
+    const cropCounts = {};
+    const treeCounts = {};
+    const waterCounts = {};
+    const structureCounts = {};
+
+    const waterSources = state.items.filter((i) => WATER_SET.has(i.type));
+
+    const itemDetails = state.items.map((it) => {
+      const def = getItemDefinition(it.type);
+      const name = def?.label || it.type;
+      const x_m = Number((it.x / 40).toFixed(1));
+      const y_m = Number((it.y / 40).toFixed(1));
+      const w_m = Number((it.width / 40).toFixed(1));
+      const h_m = Number((it.height / 40).toFixed(1));
+
+      if (CROP_SET.has(it.type)) {
+        cropCounts[name] = (cropCounts[name] || 0) + 1;
+      } else if (TREE_SET.has(it.type)) {
+        treeCounts[name] = (treeCounts[name] || 0) + 1;
+      } else if (WATER_SET.has(it.type)) {
+        waterCounts[name] = (waterCounts[name] || 0) + 1;
+      } else {
+        structureCounts[name] = (structureCounts[name] || 0) + 1;
+      }
+
+      let nearestWaterDist = null;
+      if (waterSources.length > 0) {
+        const dists = waterSources.map((w) => Math.hypot((w.x - it.x) / 40, (w.y - it.y) / 40));
+        nearestWaterDist = Number(Math.min(...dists).toFixed(1));
+      }
+
+      return `• [${def?.category || 'Asset'}] ${name} at (${x_m}m, ${y_m}m), size ${w_m}m×${h_m}m${nearestWaterDist !== null ? `, dist to water: ${nearestWaterDist}m` : ''}`;
+    });
+
+    const cropSummaryStr = Object.entries(cropCounts).map(([k, v]) => `${v}× ${k}`).join(', ') || 'None';
+    const treeSummaryStr = Object.entries(treeCounts).map(([k, v]) => `${v}× ${k}`).join(', ') || 'None';
+    const waterSummaryStr = Object.entries(waterCounts).map(([k, v]) => `${v}× ${k}`).join(', ') || 'None';
+    const structureSummaryStr = Object.entries(structureCounts).map(([k, v]) => `${v}× ${k}`).join(', ') || 'None';
+
+    const p = state.farmProfile || {};
+    const env = state.environment || {};
+    const s = state.farmSettings || {};
+
+    return `Current Farm Plot Context:
+- Farm Name: ${s.name || state.farmName} (${s.boundaryWidthM || 100}m × ${s.boundaryHeightM || 100}m, ${s.totalSize || 2.5} ${s.unit || 'acres'})
+- Location & Climate: ${p.location_name || 'Salinas Valley, CA'}, Elevation: ${p.elevation_m || 25}m, Slope: ${p.slope_pct || 1.5}%
+- Soil Profile: Texture ${String(p.soil_texture || 'loam').toUpperCase()}, OM: ${p.organic_matter_pct || 3.2}%, pH: ${p.baseline_ph || 6.5}, N-P-K: ${p.baseline_nitrogen_ppm || 140}-${p.baseline_phosphorus_ppm || 45}-${p.baseline_potassium_ppm || 160} ppm
+- Water Infrastructure: ${p.water_source || 'Groundwater Well'} (Reserve: ${p.current_reserve_m3 || 420}m³ / ${p.storage_capacity_m3 || 500}m³)
+- Weather & Environment: Temp ${env.temp_avg_c || 22}°C, Solar ${env.solar_radiation_wm2 || 450} W/m², Rain ${env.rainfall_mm || 0}mm, ET0 ${env.et0_mm || 4.2}mm/day, Humidity ${env.humidity_pct || 60}%
+- Total Placed Assets: ${state.items.length}
+- Cultivated Crops: ${cropSummaryStr}
+- Trees & Orchards: ${treeSummaryStr}
+- Irrigation & Water: ${waterSummaryStr}
+- Structures & Paths: ${structureSummaryStr}
+- Placed Asset Layout:
+  ${itemDetails.join('\n  ')}`;
+  };
+
+  /**
    * Direct Gemini API client in browser when API Key is provided
    */
-  const callDirectGemini = async (apiKey, prompt, chatHistory) => {
-    const crops = state.items.filter((i) => i.type === ITEM_TYPES.WHEAT || i.type === ITEM_TYPES.CARROT);
-    const wheatCount = state.items.filter((i) => i.type === ITEM_TYPES.WHEAT).length;
-    const carrotCount = state.items.filter((i) => i.type === ITEM_TYPES.CARROT).length;
-    const waterCount = state.items.filter((i) => i.type === ITEM_TYPES.WATER).length;
-    const treeCount = state.items.filter((i) => i.type === ITEM_TYPES.TREE).length;
-    const grassCount = state.items.filter((i) => i.type === ITEM_TYPES.GRASS).length;
-    const fenceCount = state.items.filter((i) => i.type === ITEM_TYPES.FENCE).length;
-
-    const farmContextStr = `Current Farm Plot Context:
-- Total Placed Assets: ${state.items.length}
-- Cultivated Crops: ${crops.length} (${wheatCount} Wheat plots, ${carrotCount} Carrot patches)
-- Irrigation Infrastructure: ${waterCount} Water Canals
-- Perimeter & Flora: ${treeCount} Orchard Trees, ${fenceCount} Wood Fences, ${grassCount} Grass Plots
-- Simulation Day: ${state.currentDay}
-- Ambient Weather: Temp avg 22°C, Solar Radiation 450 W/m², Reference ET0 4.2 mm/day`;
+  const callDirectGemini = async (apiKey, prompt, chatHistory, requestedModel = null) => {
+    const farmContextStr = generateDetailedFarmContextStr();
 
     const systemInstruction = `You are GreenTwin's AI Agronomist and Digital Farmland Twin reasoning engine.
 You have full access to the user's virtual farm layout.
@@ -871,28 +895,7 @@ Instructions:
    * Direct Ollama client in browser when local Ollama daemon is running (Qwen 3.5 / 2.5)
    */
   const callDirectOllama = async (prompt, chatHistory, requestedModel = null) => {
-    const crops = state.items.filter((i) => 
-      i.type === ITEM_TYPES.WHEAT || 
-      i.type === ITEM_TYPES.CARROT || 
-      i.type === ITEM_TYPES.TOMATO || 
-      i.type === ITEM_TYPES.CORN || 
-      i.type === ITEM_TYPES.PUMPKIN || 
-      i.type === ITEM_TYPES.STRAWBERRY
-    );
-    const wheatCount = state.items.filter((i) => i.type === ITEM_TYPES.WHEAT).length;
-    const carrotCount = state.items.filter((i) => i.type === ITEM_TYPES.CARROT).length;
-    const waterCount = state.items.filter((i) => i.type === ITEM_TYPES.WATER || i.type === ITEM_TYPES.WELL).length;
-    const treeCount = state.items.filter((i) => i.type === ITEM_TYPES.TREE).length;
-    const grassCount = state.items.filter((i) => i.type === ITEM_TYPES.GRASS).length;
-    const fenceCount = state.items.filter((i) => i.type === ITEM_TYPES.FENCE).length;
-
-    const farmContextStr = `Current Farm Plot Context:
-- Total Placed Assets: ${state.items.length}
-- Cultivated Crops: ${crops.length} (${wheatCount} Wheat, ${carrotCount} Carrot)
-- Irrigation Infrastructure: ${waterCount} Water Canals/Wells
-- Perimeter & Flora: ${treeCount} Trees, ${fenceCount} Fences, ${grassCount} Grass Plots
-- Simulation Day: ${state.currentDay}
-- Ambient Weather: Temp avg 22°C, Solar Radiation 450 W/m², Reference ET0 4.2 mm/day`;
+    const farmContextStr = generateDetailedFarmContextStr();
 
     const isSmallLocalModel = (requestedModel || '').includes('1b') || (requestedModel || '').includes('2b') || (requestedModel || '').includes('3.2');
     const systemInstruction = `You are GreenTwin's AI Agronomist and Digital Farmland Twin reasoning engine.
@@ -992,7 +995,8 @@ Instructions:
       i.type === ITEM_TYPES.WATER || 
       i.type === ITEM_TYPES.POND || 
       i.type === ITEM_TYPES.WELL || 
-      i.type === ITEM_TYPES.SPRINKLER
+      i.type === ITEM_TYPES.SPRINKLER ||
+      i.type === ITEM_TYPES.PIPE
     );
 
     return {
@@ -1005,6 +1009,9 @@ Instructions:
         provider: activeAiModel.providerLabel,
         is_local: activeAiModel.isLocal,
       },
+      farm_settings: state.farmSettings,
+      farm_profile: state.farmProfile,
+      environment: state.environment,
       ui_patch_details: {
         title: 'GreenTwin',
         theme: 'Minimal Dark Agronomy',
@@ -1013,7 +1020,9 @@ Instructions:
         has_simulation_panel: true,
         has_scenario_comparison_modal: true,
       },
+      items: state.items,
       items_2d: state.items.map((item) => {
+        const def = getItemDefinition(item.type);
         const x_m = Number((item.x / 40).toFixed(2));
         const y_m = Number((item.y / 40).toFixed(2));
         const w_m = Number((item.width / 40).toFixed(2));
@@ -1032,16 +1041,18 @@ Instructions:
         return {
           id: item.id,
           type: item.type,
+          label: def?.label || item.type,
           x_m,
           y_m,
           width_m: w_m,
           height_m: h_m,
+          rotation: item.rotation || 0,
           nearest_water_dist_m: nearestWaterDistM,
-          category: getItemDefinition(item.type)?.category || 'Other',
+          category: def?.category || 'Other',
         };
       }),
     };
-  }, [state.items, state.farmName, state.currentDay, activeAiModel]);
+  }, [state.items, state.farmName, state.currentDay, state.farmSettings, state.farmProfile, state.environment, activeAiModel]);
 
   /**
    * Send user prompt to Autonomous AI Agronomist Agent

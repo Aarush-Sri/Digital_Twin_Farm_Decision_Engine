@@ -81,6 +81,13 @@ class BatchIrrigationRequest(BaseModel):
     end_y: Optional[int] = None
 
 
+class SyncFarmLayoutRequest(BaseModel):
+    items: List[Dict[str, Any]]
+    farm_settings: Optional[Dict[str, Any]] = None
+    farm_profile: Optional[Dict[str, Any]] = None
+    environment: Optional[Dict[str, Any]] = None
+
+
 @router.post("/create", response_model=Dict[str, Any])
 def create_farm(req: CreateFarmRequest):
     """Creates a new farm world session with initialized grid and environment."""
@@ -200,3 +207,25 @@ def save_farm_snapshot(farm_id: str):
     if not file_path:
         raise HTTPException(status_code=404, detail="Farm session not found")
     return {"status": "saved", "farm_id": farm_id, "snapshot_file": file_path}
+
+
+@router.post("/{farm_id}/sync", response_model=Dict[str, Any])
+def sync_farm_layout(farm_id: str, req: SyncFarmLayoutRequest):
+    """Atomically synchronizes full 2D farm canvas layout, profile, and settings with simulation engine."""
+    engine = session_store.get_engine(farm_id)
+    if not engine:
+        raise HTTPException(status_code=404, detail="Farm not found")
+
+    summary = engine.sync_from_frontend(
+        items=req.items,
+        farm_settings=req.farm_settings,
+        farm_profile=req.farm_profile,
+        environment=req.environment,
+    )
+    return {
+        "status": "synchronized",
+        "farm_id": farm_id,
+        "items_count": len(req.items),
+        "world": engine.world.model_dump(),
+        "summary": summary,
+    }

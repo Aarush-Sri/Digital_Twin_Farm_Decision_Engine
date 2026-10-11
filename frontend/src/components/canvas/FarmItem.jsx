@@ -124,7 +124,7 @@ export const FarmItem = ({
         top: `${item.y}px`,
         width: `${item.width}px`,
         height: `${item.height}px`,
-        zIndex: isSelected ? Math.max(item.zIndex, 900) : item.zIndex,
+        zIndex: isSelected ? Math.max(item.zIndex || 1, 900) : (item.zIndex || 1),
       }}
       onPointerDown={handlePointerDown}
       className={`absolute cursor-move select-none rounded-lg transition-all ${

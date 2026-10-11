@@ -91,7 +91,6 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
     sendAgentChat, 
     backendStatus, 
     farmName, 
-    currentDay,
     aiProvider: contextAiProvider,
     setAiProvider: contextSetAiProvider,
     geminiModel: contextGeminiModel,
@@ -103,7 +102,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
     activeAiModel: contextActiveAiModel,
   } = useFarm();
 
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState(() => [
     {
       id: 'welcome',
       role: 'assistant',
@@ -139,11 +138,11 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
   });
   const [localModel, setLocalModel] = useState(() => {
     return contextLocalModel || (typeof window !== 'undefined'
-      ? localStorage.getItem('GREENTWIN_LOCAL_MODEL') || 'llama3.2:1b'
-      : 'llama3.2:1b');
+      ? localStorage.getItem('GREENTWIN_LOCAL_MODEL') || 'qwen3.5:latest'
+      : 'qwen3.5:latest');
   });
-  const [installedModels, setInstalledModels] = useState(['llama3.2:1b', 'qwen3.5:latest']);
-  const [backendAgentStatus, setBackendAgentStatus] = useState(null);
+  const [installedModels, setInstalledModels] = useState(['qwen3.5:latest', 'llama3.2:1b']);
+  const [_backendAgentStatus, setBackendAgentStatus] = useState(null);
 
   const messagesEndRef = useRef(null);
 
@@ -320,7 +319,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
 
   return (
     <>
-      <div className="fixed inset-y-0 right-0 w-full sm:w-[500px] bg-gradient-to-b from-stone-950 via-stone-900 to-stone-950 border-l-2 border-amber-800/80 shadow-[-10px_0_30px_rgba(0,0,0,0.8)] z-50 flex flex-col transition-all duration-300">
+      <div className="fixed inset-y-0 right-0 w-full sm:w-[500px] bg-gradient-to-b from-stone-950 via-stone-900 to-stone-950 border-l-2 border-amber-800/80 shadow-[-10px_0_30px_rgba(0,0,0,0.8)] z-50 flex flex-col transition-all duration-300 select-text">
       {/* Header */}
       <div className="p-4 border-b border-amber-950/80 flex items-center justify-between bg-stone-950/90 shadow-md">
         <div className="flex items-center space-x-3">
