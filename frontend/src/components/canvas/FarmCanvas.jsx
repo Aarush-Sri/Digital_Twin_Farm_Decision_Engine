@@ -78,18 +78,76 @@ export const FarmCanvas = () => {
       onClick={handleCanvasClick}
       className="relative flex-1 h-full farm-canvas-grid farm-canvas-grid-fine overflow-hidden select-none"
     >
-      {/* Empty State Banner */}
+      {/* Empty State Banner (Stardew / Clash of Clans Mission Board) */}
       {items.length === 0 && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-zinc-500 space-y-3">
-          <div className="w-16 h-16 rounded-2xl border border-zinc-800 bg-zinc-900/60 flex items-center justify-center shadow-lg">
-            <Sparkles className="w-8 h-8 text-emerald-400/80 animate-pulse" />
-          </div>
-          <div className="text-center space-y-1">
-            <p className="text-sm font-medium text-zinc-300">
-              Drag elements from the left palette to start planning
-            </p>
-            <p className="text-xs text-zinc-500 font-mono">
-              Pick Grass, Tree, Fence, Water, Wheat, or Carrot • Snap to Grid is Active
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-6 space-y-4">
+          <div className="max-w-md w-full bg-gradient-to-b from-stone-900/95 to-stone-950/95 border-2 border-amber-900/80 rounded-2xl p-6 shadow-2xl backdrop-blur-md text-center space-y-3 pointer-events-auto">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-950/80 border-2 border-amber-500/70 flex items-center justify-center shadow-lg">
+              <Sparkles className="w-8 h-8 text-amber-300 animate-pulse" />
+            </div>
+            
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-amber-200 tracking-wide font-sans">
+                Build Your Digital Twin Farm Plot
+              </h3>
+              <p className="text-xs text-stone-300 leading-relaxed">
+                Drag elements from the left palette to start planning and building your digital twin:
+              </p>
+            </div>
+
+            <div className="grid grid-cols-4 gap-1.5 py-1 text-[10px] font-mono text-amber-100">
+              <div className="p-1.5 rounded-lg bg-stone-950/80 border border-stone-800 flex flex-col items-center space-y-1">
+                <img src="/assets/crop_wheat.png" alt="Wheat" className="w-5 h-5 pixel-crisp" />
+                <span className="truncate">🌾 Wheat</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-stone-950/80 border border-stone-800 flex flex-col items-center space-y-1">
+                <img src="/assets/crop_carrot.png" alt="Carrot" className="w-5 h-5 pixel-crisp" />
+                <span className="truncate">🥕 Carrot</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-stone-950/80 border border-stone-800 flex flex-col items-center space-y-1">
+                <img src="/assets/crop_tomato.png" alt="Tomato" className="w-5 h-5 pixel-crisp" />
+                <span className="truncate">🍅 Tomato</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-stone-950/80 border border-stone-800 flex flex-col items-center space-y-1">
+                <img src="/assets/crop_corn.png" alt="Corn" className="w-5 h-5 pixel-crisp" />
+                <span className="truncate">🌽 Corn</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-stone-950/80 border border-stone-800 flex flex-col items-center space-y-1">
+                <img src="/assets/crop_pumpkin.png" alt="Pumpkin" className="w-5 h-5 pixel-crisp" />
+                <span className="truncate">🎃 Pumpkin</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-stone-950/80 border border-stone-800 flex flex-col items-center space-y-1">
+                <img src="/assets/crop_strawberry.png" alt="Berry" className="w-5 h-5 pixel-crisp" />
+                <span className="truncate">🍓 Berry</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-stone-950/80 border border-stone-800 flex flex-col items-center space-y-1">
+                <img src="/assets/tree_transparent.png" alt="Tree" className="w-5 h-5 pixel-crisp object-contain" />
+                <span className="truncate">🌳 Tree</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-stone-950/80 border border-stone-800 flex flex-col items-center space-y-1">
+                <img src="/assets/fence_transparent.png" alt="Fence" className="w-5 h-5 pixel-crisp object-contain" />
+                <span className="truncate">🪵 Fence</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-stone-950/80 border border-stone-800 flex flex-col items-center space-y-1">
+                <img src="/assets/building_barn.png" alt="Barn" className="w-5 h-5 pixel-crisp object-contain" />
+                <span className="truncate">🏠 Barn</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-stone-950/80 border border-stone-800 flex flex-col items-center space-y-1">
+                <img src="/assets/decor_well.png" alt="Well" className="w-5 h-5 pixel-crisp object-contain" />
+                <span className="truncate">🪣 Well</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-stone-950/80 border border-stone-800 flex flex-col items-center space-y-1">
+                <img src="/assets/path_stone.png" alt="Path" className="w-5 h-5 pixel-crisp" />
+                <span className="truncate">🪨 Path</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-stone-950/80 border border-stone-800 flex flex-col items-center space-y-1">
+                <img src="/assets/water_canal.png" alt="Canal" className="w-5 h-5 pixel-crisp" />
+                <span className="truncate">💧 Canal</span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-amber-400 font-medium pt-1">
+              💡 Tip: Once placed, tap <strong>"⚡ Ask AI Agronomist"</strong> to test drought or flood what-if scenarios!
             </p>
           </div>
         </div>
@@ -113,12 +171,12 @@ export const FarmCanvas = () => {
       </AnimatePresence>
 
       {/* Subdued Bottom-Right Coordinates / Grid Status */}
-      <div className="absolute bottom-3 right-4 flex items-center space-x-3 text-[11px] font-mono text-zinc-400 bg-zinc-900/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-zinc-800 pointer-events-none shadow-sm">
+      <div className="absolute bottom-3 right-4 flex items-center space-x-3 text-[11px] font-mono text-amber-200 bg-stone-950/90 backdrop-blur-md px-3.5 py-1.5 rounded-lg border border-amber-900/60 pointer-events-none shadow-lg">
         <div className="flex items-center space-x-1.5">
-          <Grid className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Grid: {snapToGrid ? '20px Snap' : 'Freeform'}</span>
+          <Grid className="w-3.5 h-3.5 text-amber-400" />
+          <span>Snap: {snapToGrid ? '20px Grid' : 'Freeform'}</span>
         </div>
-        <span className="text-zinc-500">|</span>
+        <span className="text-stone-600">|</span>
         <span>Objects: {items.length}</span>
       </div>
     </main>
