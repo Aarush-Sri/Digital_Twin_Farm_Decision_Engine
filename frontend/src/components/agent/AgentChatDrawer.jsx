@@ -8,19 +8,83 @@ import {
   Terminal, 
   CheckCircle2, 
   ChevronDown, 
-  ChevronRight,
+  ChevronRight, 
   Cpu, 
-  RefreshCw,
-  HelpCircle,
-  Flame,
-  Droplets,
-  Sprout,
-  Scale,
-  Settings2,
-  Zap
+  RefreshCw, 
+  HelpCircle, 
+  Flame, 
+  Droplets, 
+  Sprout, 
+  Scale, 
+  Settings2, 
+  Zap, 
+  Columns, 
+  Sun, 
+  CloudRain, 
+  Thermometer 
 } from 'lucide-react';
 import { apiClient } from '../../api/apiClient';
 import { FormattedMessage } from './FormattedMessage';
+import { ScenarioComparisonModal } from '../simulation/ScenarioComparisonModal';
+
+const PRESET_SCENARIOS = [
+  {
+    id: 'drought',
+    icon: Sun,
+    title: 'Drought',
+    subtitle: 'Less rainfall for 14 days',
+    yieldDelta: '-12%',
+    yieldDeltaPct: -12,
+    waterDemand: 'Higher',
+    predictSummary: 'Some crop areas may experience moisture stress if the rainfall deficit continues and irrigation remains unchanged.',
+    actions: [
+      { title: 'Review irrigation priorities', desc: 'Prioritize the most water-sensitive crop areas.' },
+      { title: 'Compare another scenario', desc: 'Test what changes if irrigation is increased.' }
+    ]
+  },
+  {
+    id: 'heavy_rainfall',
+    icon: CloudRain,
+    title: 'Heavy rainfall',
+    subtitle: 'Test flooding risk',
+    yieldDelta: '-8%',
+    yieldDeltaPct: -8,
+    waterDemand: 'Saturated',
+    predictSummary: 'Soil saturation exceeds 85%, increasing root hypoxia risks in low-lying crop beds and slowing nutrient absorption.',
+    actions: [
+      { title: 'Elevate perimeter drainage', desc: 'Ensure water runoff flows to catchment ponds.' },
+      { title: 'Monitor root pathogens', desc: 'Inspect susceptible root vegetables for fungal wilt.' }
+    ]
+  },
+  {
+    id: 'heatwave',
+    icon: Thermometer,
+    title: 'Heatwave',
+    subtitle: 'Higher temperatures',
+    yieldDelta: '-15%',
+    yieldDeltaPct: -15,
+    waterDemand: 'Very High',
+    predictSummary: 'Peak daytime temperatures exceed 34°C, triggering rapid stomatal closure and doubling crop evapotranspiration demand.',
+    actions: [
+      { title: 'Provide tree windbreak shading', desc: 'Canopy shading reduces leaf scorch by up to 20%.' },
+      { title: 'Schedule nocturnal irrigation', desc: 'Water during night hours to minimize evaporation.' }
+    ]
+  },
+  {
+    id: 'irrigation_change',
+    icon: Droplets,
+    title: 'Irrigation change',
+    subtitle: 'Adjust watering frequency',
+    yieldDelta: '+18%',
+    yieldDeltaPct: 18,
+    waterDemand: 'Optimized',
+    predictSummary: 'Targeted drip irrigation maintains soil moisture consistently above 60%, boosting vegetative growth rates.',
+    actions: [
+      { title: 'Expand drip coverage', desc: 'Extend water canals adjacent to outer crop rows.' },
+      { title: 'Calibrate flow rate', desc: 'Keep watering rate steady at 6.0 mm/day.' }
+    ]
+  }
+];
 
 export const AgentChatDrawer = ({ isOpen, onClose }) => {
   const { 
@@ -52,6 +116,10 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState({});
   const [showConfig, setShowConfig] = useState(false);
+  const [activeTab, setActiveTab] = useState('scenarios'); // 'scenarios' | 'chat'
+  const [selectedScenario, setSelectedScenario] = useState(null);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [showComparisonModal, setShowComparisonModal] = useState(false);
   
   // AI Provider & Key Settings (synced with Context & localStorage)
   const [apiKey, setApiKey] = useState(() => {
@@ -158,9 +226,23 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
     }
   }, [messages, isOpen]);
 
+  const handleRunScenario = (sc) => {
+    setIsSimulating(true);
+    setSelectedScenario(null);
+
+    // Simulate fast realistic calculation
+    setTimeout(() => {
+      setSelectedScenario(sc);
+      setIsSimulating(false);
+    }, 450);
+  };
+
   const handleSend = async (customPrompt) => {
     const promptToSend = customPrompt || inputPrompt;
     if (!promptToSend.trim() || isLoading) return;
+
+    // Automatically switch to chat tab
+    setActiveTab('chat');
 
     const userMessageId = `user-${Date.now()}`;
     const userMsg = {
@@ -235,7 +317,8 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full sm:w-[480px] bg-gradient-to-b from-stone-950 via-stone-900 to-stone-950 border-l-2 border-amber-800/80 shadow-[-10px_0_30px_rgba(0,0,0,0.8)] z-50 flex flex-col transition-all duration-300">
+    <>
+      <div className="fixed inset-y-0 right-0 w-full sm:w-[500px] bg-gradient-to-b from-stone-950 via-stone-900 to-stone-950 border-l-2 border-amber-800/80 shadow-[-10px_0_30px_rgba(0,0,0,0.8)] z-50 flex flex-col transition-all duration-300">
       {/* Header */}
       <div className="p-4 border-b border-amber-950/80 flex items-center justify-between bg-stone-950/90 shadow-md">
         <div className="flex items-center space-x-3">
@@ -490,8 +573,38 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
         </div>
       )}
 
+      {/* Tab Switcher: Simulation Panel vs Freeform Chat */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-amber-950/80 bg-stone-900/60 flex-shrink-0">
+        <div className="flex items-center space-x-1 p-1 bg-stone-950 rounded-lg border border-stone-800 text-xs w-full">
+          <button
+            type="button"
+            onClick={() => setActiveTab('scenarios')}
+            className={`flex-1 py-1.5 rounded-md font-bold transition-all flex items-center justify-center space-x-1.5 ${
+              activeTab === 'scenarios'
+                ? 'bg-amber-600 text-stone-950 shadow-sm'
+                : 'text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Simulation Panel</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('chat')}
+            className={`flex-1 py-1.5 rounded-md font-bold transition-all flex items-center justify-center space-x-1.5 ${
+              activeTab === 'chat'
+                ? 'bg-amber-600 text-stone-950 shadow-sm'
+                : 'text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            <Bot className="w-3.5 h-3.5" />
+            <span>Freeform Chat ({Math.max(0, messages.length - 1)})</span>
+          </button>
+        </div>
+      </div>
+
       {/* Suggested Quick Prompts (RPG Quest / What-If Scenarios) */}
-      <div className="px-3.5 py-2.5 bg-stone-950/80 border-b border-amber-950/80 flex items-center space-x-2 overflow-x-auto text-xs no-scrollbar">
+      <div className="px-3.5 py-2.5 bg-stone-950/80 border-b border-amber-950/80 flex items-center space-x-2 overflow-x-auto text-xs no-scrollbar flex-shrink-0">
         <button
           onClick={() => handleSend('Inspect current crop health and soil moisture')}
           className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-950/70 text-emerald-200 hover:bg-emerald-900 border border-emerald-700/60 transition-all shadow-sm"
@@ -525,8 +638,147 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
         </button>
       </div>
 
-      {/* Messages Feed */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+      {/* ======================================================== */}
+      {/* VIEW 1: DEDICATED SIMULATION PANEL */}
+      {/* ======================================================== */}
+      {activeTab === 'scenarios' && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Scenario Grid Question Heading */}
+          <div className="space-y-1">
+            <h4 className="text-xs font-bold text-stone-200">
+              What would you like to test on your farm?
+            </h4>
+            <p className="text-[11px] text-stone-400">
+              Select an environmental scenario to run a digital twin stress simulation:
+            </p>
+          </div>
+
+          {/* 4 Cards Grid */}
+          <div className="grid grid-cols-2 gap-2.5">
+            {PRESET_SCENARIOS.map((sc) => {
+              const IconComp = sc.icon;
+              const isSelected = selectedScenario?.id === sc.id;
+              return (
+                <button
+                  key={sc.id}
+                  type="button"
+                  onClick={() => handleRunScenario(sc)}
+                  className={`p-3.5 rounded-xl border text-left transition-all relative overflow-hidden group shadow-md ${
+                    isSelected
+                      ? 'bg-amber-950/50 border-amber-500 shadow-amber-900/30'
+                      : 'bg-stone-900/80 hover:bg-stone-850 border-stone-800 hover:border-amber-600/70'
+                  }`}
+                >
+                  <IconComp className="w-5 h-5 text-amber-400 mb-2 group-hover:scale-110 transition-transform" />
+                  <h5 className="text-xs font-bold text-stone-100 group-hover:text-amber-200">
+                    {sc.title}
+                  </h5>
+                  <p className="text-[10px] text-stone-400 mt-0.5 line-clamp-1">
+                    {sc.subtitle}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Simulating Loader */}
+          {isSimulating && (
+            <div className="p-4 rounded-xl bg-stone-900/90 border border-amber-900 flex items-center space-x-3 animate-pulse">
+              <RefreshCw className="w-5 h-5 text-amber-400 animate-spin" />
+              <div className="text-xs">
+                <p className="font-bold text-amber-200">Simulating Microclimate & Hydrodynamics...</p>
+                <p className="text-[10px] text-stone-400 font-mono">Running soil moisture and transpiration equations</p>
+              </div>
+            </div>
+          )}
+
+          {/* Simulation Results */}
+          {selectedScenario && !isSimulating && (
+            <div className="p-4 rounded-2xl bg-stone-900/90 border-2 border-amber-800/80 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+              {/* Result Header */}
+              <div className="flex items-center justify-between pb-2 border-b border-stone-800">
+                <div>
+                  <h4 className="text-xs font-bold text-amber-100">
+                    Simulation Results
+                  </h4>
+                  <p className="text-[10px] text-stone-400">
+                    Scenario: {selectedScenario.title} ({selectedScenario.subtitle})
+                  </p>
+                </div>
+                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700/60">
+                  Illustrative example
+                </span>
+              </div>
+
+              {/* Metric Cards */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="p-3 rounded-xl bg-stone-950 border border-stone-800 space-y-0.5">
+                  <span className="text-[10px] text-stone-400 block">Estimated yield change</span>
+                  <span className={`text-2xl font-extrabold font-mono ${selectedScenario.yieldDeltaPct < 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                    {selectedScenario.yieldDelta}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-stone-950 border border-stone-800 space-y-0.5">
+                  <span className="text-[10px] text-stone-400 block">Water demand</span>
+                  <span className="text-2xl font-extrabold font-mono text-sky-400">
+                    {selectedScenario.waterDemand}
+                  </span>
+                </div>
+              </div>
+
+              {/* What the model predicts */}
+              <div className="space-y-1">
+                <h5 className="text-[11px] font-bold text-amber-200">
+                  What the model predicts
+                </h5>
+                <p className="text-[11px] text-stone-300 leading-relaxed bg-stone-950/60 p-2.5 rounded-lg border border-stone-800">
+                  {selectedScenario.predictSummary}
+                </p>
+              </div>
+
+              {/* Suggested actions */}
+              <div className="space-y-2">
+                <h5 className="text-[11px] font-bold text-amber-200">
+                  Suggested actions
+                </h5>
+                <div className="space-y-1.5">
+                  {selectedScenario.actions.map((act, i) => (
+                    <div key={i} className="flex items-start space-x-2 text-[11px] text-stone-300">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong className="text-stone-200 block">{act.title}</strong>
+                        <span className="text-stone-400 text-[10px]">{act.desc}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Compare with current plan */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowComparisonModal(true)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-stone-950 font-extrabold text-xs tracking-wide shadow-lg flex items-center justify-center space-x-2 transition-all active:scale-95"
+                >
+                  <Columns className="w-4 h-4 text-stone-950" />
+                  <span>Compare with current plan</span>
+                </button>
+                <p className="text-[9px] text-center text-stone-500 mt-1.5">
+                  Shows original farm beside simulated version, highlighting affected plots.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* VIEW 2: MULTI-TURN CONVERSATIONAL CHAT */}
+      {/* ======================================================== */}
+      {activeTab === 'chat' && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -643,58 +895,67 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
         )}
         <div ref={messagesEndRef} />
       </div>
+    )}
 
-      {/* Active AI Model Live Indication Bar */}
-      <div className="px-3.5 py-1.5 bg-stone-900/90 border-t border-amber-950/80 flex items-center justify-between text-[11px] select-none">
-        <div className="flex items-center space-x-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <span className="text-stone-400 font-medium">Active AI Model:</span>
-          <span className="font-mono font-bold text-emerald-300 bg-stone-950 px-2 py-0.5 rounded border border-emerald-700/60 shadow-inner">
-            {effectiveActiveModel.label}
-          </span>
-          <span className="text-[10px] text-stone-500 font-mono hidden sm:inline">
-            ({effectiveActiveModel.providerLabel})
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowConfig(!showConfig)}
-          className="text-[10px] font-semibold text-amber-400 hover:text-amber-300 underline underline-offset-2 flex items-center space-x-1"
-        >
-          <span>{showConfig ? 'Hide Settings' : 'Switch Model ▾'}</span>
-        </button>
+    {/* Active AI Model Live Indication Bar */}
+    <div className="px-3.5 py-1.5 bg-stone-900/90 border-t border-amber-950/80 flex items-center justify-between text-[11px] select-none">
+      <div className="flex items-center space-x-2">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <span className="text-stone-400 font-medium">Active AI Model:</span>
+        <span className="font-mono font-bold text-emerald-300 bg-stone-950 px-2 py-0.5 rounded border border-emerald-700/60 shadow-inner">
+          {effectiveActiveModel.label}
+        </span>
+        <span className="text-[10px] text-stone-500 font-mono hidden sm:inline">
+          ({effectiveActiveModel.providerLabel})
+        </span>
       </div>
-
-      {/* Input Form Footer */}
-      <div className="p-3 border-t border-stone-800 bg-stone-950">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSend();
-          }}
-          className="flex items-center space-x-2"
-        >
-          <input
-            type="text"
-            value={inputPrompt}
-            onChange={(e) => setInputPrompt(e.target.value)}
-            placeholder="Ask about crops, soil water, or what-if scenarios..."
-            disabled={isLoading}
-            className="flex-1 bg-stone-900 border border-amber-950/80 rounded-xl px-3.5 py-2.5 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-600/80 transition-colors disabled:opacity-50"
-          />
-          <button
-            type="submit"
-            disabled={!inputPrompt.trim() || isLoading}
-            className="p-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-700 text-stone-950 font-bold hover:from-amber-400 hover:to-amber-600 border border-amber-400/80 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
-            title="Send Message"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </form>
-      </div>
+      <button
+        type="button"
+        onClick={() => setShowConfig(!showConfig)}
+        className="text-[10px] font-semibold text-amber-400 hover:text-amber-300 underline underline-offset-2 flex items-center space-x-1"
+      >
+        <span>{showConfig ? 'Hide Settings' : 'Switch Model ▾'}</span>
+      </button>
     </div>
+
+    {/* Input Form Footer */}
+    <div className="p-3 border-t border-stone-800 bg-stone-950">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSend();
+        }}
+        className="flex items-center space-x-2"
+      >
+        <input
+          type="text"
+          value={inputPrompt}
+          onChange={(e) => setInputPrompt(e.target.value)}
+          placeholder="Ask about crops, soil water, or what-if scenarios..."
+          disabled={isLoading}
+          className="flex-1 bg-stone-900 border border-amber-950/80 rounded-xl px-3.5 py-2.5 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-600/80 transition-colors disabled:opacity-50"
+        />
+        <button
+          type="submit"
+          disabled={!inputPrompt.trim() || isLoading}
+          className="p-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-700 text-stone-950 font-bold hover:from-amber-400 hover:to-amber-600 border border-amber-400/80 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
+          title="Send Message"
+        >
+          <Send className="w-4 h-4" />
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {/* Scenario Comparison Modal */}
+  <ScenarioComparisonModal
+    isOpen={showComparisonModal}
+    onClose={() => setShowComparisonModal(false)}
+    scenarioData={selectedScenario}
+  />
+</>
   );
 };
