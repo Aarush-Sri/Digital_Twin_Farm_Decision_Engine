@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export const EnvironmentBar = () => {
-  const { environment, farmSummary, currentDay, backendStatus } = useFarm();
+  const { environment, farmSummary, currentDay, backendStatus, farmProfile } = useFarm();
 
   const tempAvg = environment?.temp_avg_c ?? 22.0;
   const solarRad = environment?.solar_radiation_wm2 ?? 450;
@@ -65,6 +65,15 @@ export const EnvironmentBar = () => {
             <span className="text-[10px] text-zinc-500">mm ET₀</span>
           </div>
         </div>
+
+        {/* Soil & Lat profile badge */}
+        {farmProfile && (
+          <div className="hidden xl:flex items-center space-x-1.5 text-[11px] text-zinc-400 border-l border-zinc-800 pl-3">
+            <span className="capitalize text-emerald-400 font-medium">{farmProfile.soil_texture} Soil</span>
+            <span className="text-zinc-600">•</span>
+            <span className="text-zinc-300 font-mono">{farmProfile.latitude_deg}°N</span>
+          </div>
+        )}
       </div>
 
       {/* Right: Crop Vitals & Yield Projections */}

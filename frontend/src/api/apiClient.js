@@ -82,6 +82,17 @@ export const apiClient = {
     return request(`/api/v1/farm/${encodeURIComponent(farmId)}/summary`);
   },
 
+  async getFarmProfile(farmId) {
+    return request(`/api/v1/farm/${encodeURIComponent(farmId)}/profile`);
+  },
+
+  async updateFarmProfile(farmId, profileData) {
+    return request(`/api/v1/farm/${encodeURIComponent(farmId)}/profile`, {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  },
+
   async updateTile(farmId, { x, y, cropType, irrigationType, irrigationRateMm, soilMoisturePct, soilNitrogenPpm, soilPh }) {
     return request(`/api/v1/farm/${encodeURIComponent(farmId)}/tile/update`, {
       method: 'POST',

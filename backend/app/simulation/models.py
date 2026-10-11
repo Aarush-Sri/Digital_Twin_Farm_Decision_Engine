@@ -33,6 +33,58 @@ class IrrigationType(str, Enum):
     FLOOD = "flood"
 
 
+class SoilTexture(str, Enum):
+    LOAM = "loam"
+    SANDY = "sandy"
+    CLAY = "clay"
+    SILT = "silt"
+
+
+SOIL_TEXTURE_HYDROLOGY: Dict[str, Dict[str, float]] = {
+    SoilTexture.LOAM: {"field_capacity_pct": 75.0, "wilting_point_pct": 20.0},
+    SoilTexture.SANDY: {"field_capacity_pct": 45.0, "wilting_point_pct": 10.0},
+    SoilTexture.CLAY: {"field_capacity_pct": 85.0, "wilting_point_pct": 30.0},
+    SoilTexture.SILT: {"field_capacity_pct": 78.0, "wilting_point_pct": 22.0},
+}
+
+
+class FarmProfile(BaseModel):
+    # 1. Location & Topography
+    farm_name: str = "My Virtual Farm"
+    location_name: str = "Salinas Valley, CA"
+    country: str = "United States"
+    latitude_deg: float = Field(default=36.5, ge=-60.0, le=60.0, description="Latitude in degrees (-60 to +60)")
+    longitude_deg: float = Field(default=-121.65, ge=-180.0, le=180.0, description="Longitude in degrees")
+    elevation_m: float = Field(default=25.0, ge=-50.0, le=4500.0, description="Elevation in meters")
+    slope_pct: float = Field(default=1.5, ge=0.0, le=35.0, description="Terrain slope grade percentage")
+
+    # 2. Climate & Atmospheric Profile
+    base_temp_c: float = Field(default=22.0, ge=-10.0, le=45.0, description="Annual baseline temperature °C")
+    diurnal_range_c: float = Field(default=12.0, ge=2.0, le=25.0, description="Daily temperature range spread °C")
+    annual_rainfall_mm: float = Field(default=550.0, ge=0.0, le=3000.0, description="Average annual precipitation mm")
+    mean_wind_speed_ms: float = Field(default=2.5, ge=0.0, le=20.0, description="Mean prevailing wind speed m/s")
+
+    # 3. Soil & Subsurface Chemistry
+    soil_texture: SoilTexture = Field(default=SoilTexture.LOAM, description="Dominant soil texture")
+    organic_matter_pct: float = Field(default=3.2, ge=0.2, le=20.0, description="Soil organic matter percentage")
+    baseline_ph: float = Field(default=6.5, ge=4.0, le=9.0, description="Soil baseline pH")
+    baseline_nitrogen_ppm: float = Field(default=140.0, ge=0.0, description="Baseline soil Nitrogen ppm")
+    baseline_phosphorus_ppm: float = Field(default=45.0, ge=0.0, description="Baseline soil Phosphorus ppm")
+    baseline_potassium_ppm: float = Field(default=160.0, ge=0.0, description="Baseline soil Potassium ppm")
+    soil_salinity_ec_ds_m: float = Field(default=0.8, ge=0.0, le=12.0, description="Soil electrical conductivity EC (dS/m)")
+
+    # 4. Water Infrastructure & Sourcing
+    water_source: str = Field(default="Groundwater Well", description="Water supply source")
+    storage_capacity_m3: float = Field(default=500.0, ge=0.0, description="Reservoir capacity in m³")
+    current_reserve_m3: float = Field(default=420.0, ge=0.0, description="Available water reserve in m³")
+    water_cost_per_m3: float = Field(default=0.85, ge=0.0, description="Financial water cost per m³")
+
+    # 5. Farm Operations & Management
+    farming_system: str = Field(default="regenerative", description="conventional | organic | regenerative")
+    organic_certified: bool = Field(default=True, description="Organic certification status")
+    currency_symbol: str = Field(default="$", description="Currency symbol for operations")
+
+
 class SoilState(BaseModel):
     moisture_pct: float = Field(default=60.0, ge=0.0, le=100.0, description="Volumetric soil moisture percentage (0-100%)")
     nitrogen_ppm: float = Field(default=120.0, ge=0.0, description="Available Nitrogen in ppm")
@@ -97,6 +149,7 @@ class FarmWorld(BaseModel):
     width: int = 10
     height: int = 10
     current_day: int = 1
+    profile: FarmProfile = Field(default_factory=FarmProfile)
     environment: EnvironmentState = Field(default_factory=EnvironmentState)
     tiles: List[FarmTile] = Field(default_factory=list)
     history: List[SimulationLogEntry] = Field(default_factory=list)

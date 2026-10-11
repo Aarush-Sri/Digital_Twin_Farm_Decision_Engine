@@ -1,3 +1,4 @@
+import math
 from typing import Optional, List, Dict, Any
 from .models import (
     FarmWorld,
@@ -9,6 +10,9 @@ from .models import (
     IrrigationType,
     EnvironmentState,
     SimulationLogEntry,
+    FarmProfile,
+    SoilTexture,
+    SOIL_TEXTURE_HYDROLOGY,
 )
 from .environment import EnvironmentEngine
 from .crop_growth import CropGrowthEngine, CROP_DATABASE
@@ -22,7 +26,14 @@ class SimulationEngine:
             self.world = self._create_default_world(10, 10)
         else:
             self.world = world
-        self.env_engine = EnvironmentEngine(latitude_deg=36.5)
+        prof = self.world.profile if hasattr(self.world, "profile") and self.world.profile else FarmProfile()
+        self.env_engine = EnvironmentEngine(
+            latitude_deg=prof.latitude_deg,
+            elevation_m=prof.elevation_m,
+            base_temp_c=prof.base_temp_c,
+            diurnal_range_c=prof.diurnal_range_c,
+            mean_wind_speed_ms=prof.mean_wind_speed_ms,
+        )
 
     @classmethod
     def _create_default_world(cls, width: int = 10, height: int = 10, name: str = "New Farm") -> FarmWorld:
@@ -99,6 +110,51 @@ class SimulationEngine:
         tile.crop = None
         tile.is_fallow = True
         return harvested_yield
+
+    def update_profile(self, profile_data: Dict[str, Any] | FarmProfile) -> FarmProfile:
+        """Updates the farm universal profile and recalibrates environmental and soil engines."""
+        if isinstance(profile_data, dict):
+            current = self.world.profile.model_dump()
+            for k, v in profile_data.items():
+                if v is not None:
+                    current[k] = v
+            self.world.profile = FarmProfile.model_validate(current)
+        elif isinstance(profile_data, FarmProfile):
+            self.world.profile = profile_data
+
+        # Synchronize farm name
+        self.world.name = self.world.profile.farm_name
+
+        # Recalibrate environment engine
+        self.env_engine.latitude_deg = self.world.profile.latitude_deg
+        self.env_engine.latitude_rad = math.radians(self.world.profile.latitude_deg)
+        self.env_engine.elevation_m = self.world.profile.elevation_m
+        self.env_engine.base_temp_c = self.world.profile.base_temp_c
+        self.env_engine.diurnal_range_c = self.world.profile.diurnal_range_c
+        self.env_engine.mean_wind_speed_ms = self.world.profile.mean_wind_speed_ms
+
+        # Sync soil hydrological properties based on chosen soil texture & organic matter
+        hydro = SOIL_TEXTURE_HYDROLOGY.get(self.world.profile.soil_texture)
+        if hydro:
+            om_bonus = max(0.0, (self.world.profile.organic_matter_pct - 2.0) * 0.5)
+            fc = round(min(90.0, hydro["field_capacity_pct"] + om_bonus), 1)
+            wp = hydro["wilting_point_pct"]
+            for tile in self.world.tiles:
+                tile.soil.field_capacity_pct = fc
+                tile.soil.wilting_point_pct = wp
+                if tile.is_fallow:
+                    tile.soil.ph = self.world.profile.baseline_ph
+                    tile.soil.nitrogen_ppm = self.world.profile.baseline_nitrogen_ppm
+                    tile.soil.phosphorus_ppm = self.world.profile.baseline_phosphorus_ppm
+                    tile.soil.potassium_ppm = self.world.profile.baseline_potassium_ppm
+
+        # Recalculate day environment with new latitude
+        self.world.environment = self.env_engine.calculate_day_environment(
+            self.world.current_day,
+            weather_override={"temp_avg_c": self.world.profile.base_temp_c} if self.world.current_day == 1 else None
+        )
+
+        return self.world.profile
 
     def step_day(self, weather_override: Optional[dict] = None) -> EnvironmentState:
         """Executes a 1-day simulation step across all tiles and updates environment."""
@@ -192,6 +248,7 @@ class SimulationEngine:
         return {
             "farm_id": self.world.farm_id,
             "farm_name": self.world.name,
+            "profile": self.world.profile.model_dump(),
             "current_day": self.world.current_day,
             "grid_size": f"{self.world.width}x{self.world.height}",
             "total_tiles": len(self.world.tiles),

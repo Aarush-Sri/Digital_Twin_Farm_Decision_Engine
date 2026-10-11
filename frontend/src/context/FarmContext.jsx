@@ -677,6 +677,35 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     }
   }, [state.farmId, state.backendStatus]);
 
+  /**
+   * Update farm profile (location, climate, soil texture, water source)
+   */
+  const updateFarmProfile = useCallback(async (profileData) => {
+    if (!state.farmId || state.backendStatus !== 'connected') {
+      dispatch({
+        type: ACTION_TYPES.SET_FARM_PROFILE,
+        payload: { profile: profileData },
+      });
+      return { success: true, offline: true };
+    }
+
+    try {
+      const res = await apiClient.updateFarmProfile(state.farmId, profileData);
+      dispatch({
+        type: ACTION_TYPES.SET_FARM_PROFILE,
+        payload: {
+          profile: res.profile,
+          summary: res.summary,
+          environment: res.summary?.environment,
+        },
+      });
+      return { success: true, data: res };
+    } catch (err) {
+      console.error('Failed to update farm profile:', err);
+      return { success: false, error: err.message };
+    }
+  }, [state.farmId, state.backendStatus]);
+
   const value = useMemo(() => ({
     ...state,
     selectedItem,
@@ -698,6 +727,7 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     runWhatIf,
     sendAgentChat,
     saveFarmSnapshot,
+    updateFarmProfile,
   }), [
     state,
     selectedItem,
@@ -717,6 +747,7 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     runWhatIf,
     sendAgentChat,
     saveFarmSnapshot,
+    updateFarmProfile,
   ]);
 
   return <FarmContext.Provider value={value}>{children}</FarmContext.Provider>;

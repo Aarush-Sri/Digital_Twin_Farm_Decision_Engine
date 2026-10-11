@@ -5,15 +5,17 @@ import {
   Magnet, 
   Trash2, 
   Layers,
-  Sparkles
+  Sparkles,
+  Settings
 } from 'lucide-react';
 
-export const Header = ({ onOpenAgentChat }) => {
+export const Header = ({ onOpenAgentChat, onOpenProfile }) => {
   const { 
     snapToGrid, 
     toggleSnap, 
     clearCanvas, 
-    items 
+    items,
+    farmProfile
   } = useFarm();
 
   const handleClear = () => {
@@ -36,6 +38,11 @@ export const Header = ({ onOpenAgentChat }) => {
             <span className="text-[10px] font-normal uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">
               Farm Canvas
             </span>
+            {farmProfile?.farm_name && (
+              <span className="hidden lg:inline text-xs font-normal text-zinc-400 border-l border-zinc-800 pl-2">
+                {farmProfile.farm_name}
+              </span>
+            )}
           </h1>
         </div>
       </div>
@@ -48,8 +55,20 @@ export const Header = ({ onOpenAgentChat }) => {
         </div>
       </div>
 
-      {/* Right Action Controls: AI Chat, Snap & Clear */}
+      {/* Right Action Controls: Profile, AI Chat, Snap & Clear */}
       <div className="flex items-center space-x-2.5">
+        {/* Farm Profile Settings Button */}
+        <button
+          type="button"
+          onClick={onOpenProfile}
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-300 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/80 transition-all shadow-sm"
+          title="Edit Farm Location, Soil & Climate Profile"
+        >
+          <Settings className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="hidden md:inline">{farmProfile?.location_name || 'Farm Profile'}</span>
+          <span className="md:hidden">Profile</span>
+        </button>
+
         {/* Ask AI Agent Drawer Button */}
         <button
           type="button"
