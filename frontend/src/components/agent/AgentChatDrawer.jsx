@@ -24,6 +24,7 @@ import {
   Columns
 } from 'lucide-react';
 import { ScenarioComparisonModal } from '../simulation/ScenarioComparisonModal';
+import { FormattedChatMessage } from './FormattedChatMessage';
 
 const PRESET_SCENARIOS = [
   {
@@ -524,8 +525,8 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
                   )}
 
                   {/* Message Body */}
-                  <div className="whitespace-pre-wrap leading-relaxed text-stone-200">
-                    {msg.content}
+                  <div className="leading-relaxed text-stone-200">
+                    <FormattedChatMessage content={msg.content} />
                   </div>
 
                   {/* Multi-step Execution Steps Accordion */}

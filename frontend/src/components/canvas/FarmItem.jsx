@@ -137,143 +137,15 @@ export const FarmItem = ({
           backgroundColor: isFrameless ? 'transparent' : itemDef.color.bg,
         }}
       >
-        {/* GRASS PLOT */}
-        {item.type === 'grass' && (
-          <div 
-            className="absolute inset-0 pixel-crisp"
-            style={{
-              backgroundImage: "url('/assets/grass_tile.png')",
-              backgroundSize: '80px 46px',
-              backgroundRepeat: 'repeat',
-            }}
-          >
-            <div className="absolute inset-0 border-2 border-emerald-500/40 rounded-lg pointer-events-none" />
-          </div>
-        )}
-
-        {/* TILLED SOIL: Loamy soil tile */}
-        {item.type === 'soil' && (
-          <div 
-            className="absolute inset-0 pixel-crisp shadow-inner"
-            style={{
-              backgroundImage: "url('/assets/soil_tile.png')",
-              backgroundSize: '80px 80px',
-              backgroundRepeat: 'repeat',
-            }}
-          >
-            <div className="absolute inset-0 border border-amber-800/60 rounded-lg pointer-events-none" />
-          </div>
-        )}
-
-        {/* WATER CANAL: Sparkling freshwater canal */}
-        {item.type === 'water' && (
-          <div 
-            className="absolute inset-0 pixel-crisp shadow-inner"
-            style={{
-              backgroundImage: "url('/assets/water_canal.png')",
-              backgroundSize: '80px 80px',
-              backgroundRepeat: 'repeat',
-            }}
-          >
-            <div className="absolute inset-0 bg-sky-400/10 mix-blend-overlay animate-pulse" />
-          </div>
-        )}
-
-        {/* WHEAT FIELD: Golden ripe grain rows */}
-        {item.type === 'wheat' && (
-          <div 
-            className="absolute inset-0 pixel-crisp"
-            style={{
-              backgroundImage: "url('/assets/crop_wheat.png')",
-              backgroundSize: '80px 80px',
-              backgroundRepeat: 'repeat',
-            }}
-          >
-            <div className="absolute inset-0 border border-amber-600/50 rounded-lg pointer-events-none" />
-          </div>
-        )}
-
-        {/* CARROT PATCH: Loamy soil with carrot tops */}
-        {item.type === 'carrot' && (
-          <div 
-            className="absolute inset-0 pixel-crisp"
-            style={{
-              backgroundImage: "url('/assets/crop_carrot.png')",
-              backgroundSize: '80px 80px',
-              backgroundRepeat: 'repeat',
-            }}
-          >
-            <div className="absolute inset-0 border border-orange-700/50 rounded-lg pointer-events-none" />
-          </div>
-        )}
-
-        {/* TOMATO VINE */}
-        {item.type === 'tomato' && (
-          <div 
-            className="absolute inset-0 pixel-crisp"
-            style={{
-              backgroundImage: "url('/assets/crop_tomato.png')",
-              backgroundSize: '80px 80px',
-              backgroundRepeat: 'repeat',
-            }}
-          >
-            <div className="absolute inset-0 border border-red-700/50 rounded-lg pointer-events-none" />
-          </div>
-        )}
-
-        {/* SWEET CORN */}
-        {item.type === 'corn' && (
-          <div 
-            className="absolute inset-0 pixel-crisp"
-            style={{
-              backgroundImage: "url('/assets/crop_corn.png')",
-              backgroundSize: '80px 80px',
-              backgroundRepeat: 'repeat',
-            }}
-          >
-            <div className="absolute inset-0 border border-lime-700/50 rounded-lg pointer-events-none" />
-          </div>
-        )}
-
-        {/* PUMPKIN PATCH */}
-        {item.type === 'pumpkin' && (
-          <div 
-            className="absolute inset-0 pixel-crisp"
-            style={{
-              backgroundImage: "url('/assets/crop_pumpkin.png')",
-              backgroundSize: '100px 100px',
-              backgroundRepeat: 'repeat',
-            }}
-          >
-            <div className="absolute inset-0 border border-orange-800/50 rounded-lg pointer-events-none" />
-          </div>
-        )}
-
-        {/* STRAWBERRY BED */}
-        {item.type === 'strawberry' && (
-          <div 
-            className="absolute inset-0 pixel-crisp"
-            style={{
-              backgroundImage: "url('/assets/crop_strawberry.png')",
-              backgroundSize: '80px 80px',
-              backgroundRepeat: 'repeat',
-            }}
-          >
-            <div className="absolute inset-0 border border-rose-700/50 rounded-lg pointer-events-none" />
-          </div>
-        )}
-
-        {/* COBBLESTONE PATH */}
-        {item.type === 'stone_path' && (
-          <div 
-            className="absolute inset-0 pixel-crisp shadow-inner"
-            style={{
-              backgroundImage: "url('/assets/path_stone.png')",
-              backgroundSize: '120px 40px',
-              backgroundRepeat: 'repeat',
-            }}
-          >
-            <div className="absolute inset-0 border border-stone-600/40 rounded-lg pointer-events-none" />
+        {/* UPRIGHT SPRITES & POINT ICONS: Orchard Tree, Neem, Mango, Coconut, Barn, Well, Shed, Gate, Sprinkler */}
+        {isFrameless && item.type !== 'fence' && (
+          <div className="relative w-full h-full flex flex-col items-center justify-end overflow-visible pointer-events-none">
+            <div className="absolute bottom-1 w-[75%] h-3 bg-black/45 rounded-full blur-[1.5px] -z-0" />
+            <img 
+              src={itemDef.image || '/assets/tree_transparent.png'} 
+              alt={itemDef.label} 
+              className="w-full h-full object-contain pixel-crisp z-10 drop-shadow-md transition-transform duration-200 group-hover:scale-105"
+            />
           </div>
         )}
 
@@ -291,38 +163,28 @@ export const FarmItem = ({
           />
         )}
 
-        {/* ORCHARD TREE: Authentic Stardew Tree with isometric ground shadow */}
-        {item.type === 'tree' && (
-          <div className="relative w-full h-full flex flex-col items-center justify-end overflow-visible pointer-events-none">
-            <div className="absolute bottom-1 w-[70%] h-3 bg-black/45 rounded-full blur-[1.5px] -z-0" />
-            <img 
-              src="/assets/tree_transparent.png" 
-              alt="Orchard Tree" 
-              className="w-full h-full object-contain pixel-crisp z-10 drop-shadow-md transition-transform duration-200 group-hover:scale-105"
-            />
-          </div>
-        )}
-
-        {/* TIMBER BARN */}
-        {item.type === 'barn' && (
-          <div className="relative w-full h-full flex flex-col items-center justify-end overflow-visible pointer-events-none">
-            <div className="absolute bottom-1 w-[80%] h-4 bg-black/45 rounded-full blur-[2px] -z-0" />
-            <img 
-              src="/assets/building_barn.png" 
-              alt="Timber Barn" 
-              className="w-full h-full object-contain pixel-crisp z-10 drop-shadow-lg transition-transform duration-200 group-hover:scale-105"
-            />
-          </div>
-        )}
-
-        {/* STONE WELL */}
-        {item.type === 'well' && (
-          <div className="relative w-full h-full flex flex-col items-center justify-end overflow-visible pointer-events-none">
-            <div className="absolute bottom-1 w-[75%] h-3 bg-black/45 rounded-full blur-[1.5px] -z-0" />
-            <img 
-              src="/assets/decor_well.png" 
-              alt="Stone Well" 
-              className="w-full h-full object-contain pixel-crisp z-10 drop-shadow-md transition-transform duration-200 group-hover:scale-105"
+        {/* TILED CROPS & TERRAIN SURFACES: Paddy, Sugarcane, Banana, Wheat, Carrot, Tomato, Corn, Pumpkin, Strawberry, Grass, Soil, Water, Stone Path */}
+        {!isFrameless && (
+          <div 
+            className="absolute inset-0 pixel-crisp shadow-inner"
+            style={{
+              backgroundImage: `url('${itemDef.image || '/assets/soil_tile.png'}')`,
+              backgroundSize: item.type === 'stone_path' 
+                ? '120px 40px' 
+                : item.type === 'grass'
+                ? '80px 46px'
+                : item.type === 'pumpkin'
+                ? '100px 100px'
+                : '80px 80px',
+              backgroundRepeat: 'repeat',
+            }}
+          >
+            {item.type === 'water' && (
+              <div className="absolute inset-0 bg-sky-400/10 mix-blend-overlay animate-pulse" />
+            )}
+            <div 
+              className="absolute inset-0 border rounded-lg pointer-events-none" 
+              style={{ borderColor: `${itemDef.color?.border || '#ca8a04'}70` }} 
             />
           </div>
         )}

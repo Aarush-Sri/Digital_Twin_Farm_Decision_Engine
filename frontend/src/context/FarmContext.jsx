@@ -350,22 +350,47 @@ export const FarmProvider = ({ children }) => {
    */
   const generateLocalAnalysis = (prompt) => {
     const p = (prompt || '').toLowerCase();
-    const crops = state.items.filter((i) => 
-      i.type === ITEM_TYPES.WHEAT || 
-      i.type === ITEM_TYPES.CARROT || 
-      i.type === ITEM_TYPES.TOMATO || 
-      i.type === ITEM_TYPES.CORN || 
-      i.type === ITEM_TYPES.PUMPKIN || 
-      i.type === ITEM_TYPES.STRAWBERRY
-    );
+    const crops = state.items.filter((i) => [
+      ITEM_TYPES.WHEAT,
+      ITEM_TYPES.CARROT,
+      ITEM_TYPES.TOMATO,
+      ITEM_TYPES.CORN,
+      ITEM_TYPES.PADDY,
+      ITEM_TYPES.SUGARCANE,
+      ITEM_TYPES.BANANA,
+      ITEM_TYPES.PUMPKIN,
+      ITEM_TYPES.STRAWBERRY,
+    ].includes(i.type));
+
     const wheatCount = state.items.filter((i) => i.type === ITEM_TYPES.WHEAT).length;
     const carrotCount = state.items.filter((i) => i.type === ITEM_TYPES.CARROT).length;
     const tomatoCount = state.items.filter((i) => i.type === ITEM_TYPES.TOMATO).length;
     const cornCount = state.items.filter((i) => i.type === ITEM_TYPES.CORN).length;
+    const paddyCount = state.items.filter((i) => i.type === ITEM_TYPES.PADDY).length;
+    const sugarcaneCount = state.items.filter((i) => i.type === ITEM_TYPES.SUGARCANE).length;
+    const bananaCount = state.items.filter((i) => i.type === ITEM_TYPES.BANANA).length;
     const pumpkinCount = state.items.filter((i) => i.type === ITEM_TYPES.PUMPKIN).length;
     const strawberryCount = state.items.filter((i) => i.type === ITEM_TYPES.STRAWBERRY).length;
-    const waterCount = state.items.filter((i) => i.type === ITEM_TYPES.WATER || i.type === ITEM_TYPES.WELL).length;
-    const treeCount = state.items.filter((i) => i.type === ITEM_TYPES.TREE).length;
+
+    const waterCount = state.items.filter((i) => [
+      ITEM_TYPES.WATER,
+      ITEM_TYPES.POND,
+      ITEM_TYPES.WELL,
+      ITEM_TYPES.SPRINKLER,
+      ITEM_TYPES.PIPE,
+    ].includes(i.type)).length;
+
+    const trees = state.items.filter((i) => [
+      ITEM_TYPES.TREE,
+      ITEM_TYPES.NEEM_TREE,
+      ITEM_TYPES.MANGO_TREE,
+      ITEM_TYPES.COCONUT_TREE,
+    ].includes(i.type));
+    const treeCount = trees.length;
+    const neemCount = state.items.filter((i) => i.type === ITEM_TYPES.NEEM_TREE).length;
+    const mangoCount = state.items.filter((i) => i.type === ITEM_TYPES.MANGO_TREE).length;
+    const coconutCount = state.items.filter((i) => i.type === ITEM_TYPES.COCONUT_TREE).length;
+
     const grassCount = state.items.filter((i) => i.type === ITEM_TYPES.GRASS).length;
     const fenceCount = state.items.filter((i) => i.type === ITEM_TYPES.FENCE).length;
     const totalItems = state.items.length;
@@ -375,6 +400,9 @@ export const FarmProvider = ({ children }) => {
       carrotCount * 8.4 + 
       tomatoCount * 11.2 + 
       cornCount * 14.5 + 
+      paddyCount * 18.0 +
+      sugarcaneCount * 32.0 +
+      bananaCount * 24.0 +
       pumpkinCount * 22.0 + 
       strawberryCount * 6.5 + 
       treeCount * 12.0
@@ -383,117 +411,159 @@ export const FarmProvider = ({ children }) => {
     let content = '';
     let actionType = 'agronomic_consultation';
 
-    // 0. SCENARIO: Conversational Greetings (hello, hi, hey, who are you)
+    // 0. SCENARIO: Conversational Greetings
     if (/^(hi|hello|hey|greetings|good morning|good afternoon|good evening|yo)\b/i.test(p.trim()) || p.trim() === 'hello' || p.trim() === 'hi') {
       actionType = 'conversational_greeting';
-      content = `Hello! 👋 I am your AI Agronomist & Digital Farmland Twin decision engine for **${state.farmName}**.\n\n`;
+      content = `Hello! I am your AI Agronomist and Digital Farmland Twin decision engine for **${state.farmName}**.\n\n`;
       if (totalItems === 0) {
-        content += `Your farm plot canvas is currently empty and ready for design. You can drag **Wheat**, **Carrots**, **Trees**, or **Water Canals** from the left palette onto the grid to start cultivating.\n\n`;
+        content += `Your farm plot canvas is currently empty and ready for design. You can drag **Paddy Rice**, **Wheat**, **Sugarcane**, **Banana**, **Carrots**, **Trees**, or **Water Canals** from the left palette onto the grid to start cultivating.\n\n`;
       } else {
-        content += `I am currently tracking your **${totalItems} placed assets** (${crops.length} crop plots, ${waterCount} water canals, ${treeCount} trees).\n\n`;
+        const placedSummary = [
+          crops.length > 0 ? `${crops.length} crop plots` : null,
+          waterCount > 0 ? `${waterCount} irrigation sources` : null,
+          treeCount > 0 ? `${treeCount} trees/palms` : null,
+        ].filter(Boolean).join(', ');
+
+        content += `I am currently tracking your **${totalItems} placed assets** (${placedSummary || 'infrastructure'}).\n\n`;
       }
-      content += `What would you like to explore today? You can ask me any farming questions, layout optimization advice, or simulation scenarios like *"What if a 2-week drought hits?"*!`;
+      content += `What would you like to explore today? You can ask me any agronomy questions, layout optimization advice, or simulation scenarios like *"What if a 2-week drought hits?"* or *"How will heavy rain affect my paddy and carrots?"*`;
     }
-    // 1. SCENARIO: Drought / No Rain / Water Deficit / Dry Spell
+    // 1. SCENARIO: Drought / No Rain / Water Deficit / Dry Spell / Heatwave
     else if (p.includes('drought') || p.includes('dry') || p.includes('no water') || p.includes('no rain') || p.includes('heatwave') || p.includes('hot')) {
       actionType = 'drought_stress_simulation';
-      const lossPct = waterCount === 0 ? 55 : 20;
+      const lossPct = waterCount === 0 ? 55 : paddyCount > 0 ? 30 : 18;
       const stressedYield = estYieldKg * (1 - lossPct / 100);
 
       content = `### ☀️ Scenario Analysis: Drought & Heat Stress (14-Day Projection)\n\n`;
-      content = content + `**Atmospheric Impact:**\n`;
-      content = content + `- **Reference Evapotranspiration ($ET_0$):** Spikes from \`4.2 mm/day\` up to \`7.5 mm/day\` due to elevated vapor pressure deficit (VPD).\n`;
-      content = content + `- **Soil Moisture Depletion:** Soil moisture drops rapidly from \`65%\` down to \`~22%\` within 4–6 days without irrigation.\n\n`;
-      content = content + `**Crop Phenology & Physiological Response:**\n`;
-      content = content + `- **Stomatal Conductance:** Crops close stomata to conserve water, halting $CO_2$ assimilation and photosynthesis.\n`;
-      content = content + `- **Canopy Stunting:** Leaf area expansion halts; wheat heads abort spikelets and carrot taproots become woody and fibrous.\n`;
-      content = content + `- **Projected Harvest Impact:** Projected yield drops by **-${lossPct}%** (from ~${estYieldKg.toFixed(1)} kg down to **${stressedYield.toFixed(1)} kg**).\n\n`;
-      content = content + `**🛡️ Recommended Mitigations:**\n`;
-      if (waterCount === 0) {
-        content = content + `1. **Immediate Irrigation:** Add **Water Canals** directly adjacent to your crop rows to maintain root-zone moisture above 60%.\n`;
-      } else {
-        content = content + `1. **Irrigation Network Active:** Your ${waterCount} water canals provide a critical buffer, limiting drought losses to only ~${lossPct}%.\n`;
+      content += `**Microclimate & Soil Impact:**\n`;
+      content += `- Reference Evapotranspiration ($ET_0$) spikes from 4.2 mm/day to 7.8 mm/day due to high vapor pressure deficit (VPD).\n`;
+      content += `- Root-zone moisture depletes from 68% down to ~20% in 5 days if supplemental irrigation is absent.\n\n`;
+      
+      content += `**Crop-Specific Physiological Response:**\n`;
+      if (paddyCount > 0) {
+        content += `- Paddy Rice: High vulnerability. Paddy requires 5–10 cm water ponding; moisture drop will cause leaf rolling and spikelet sterility.\n`;
       }
-      content = content + `2. **Mulching with Grass:** Place Grass plots around crop borders to suppress evaporative moisture loss.\n`;
-      content = content + `3. **Tree Windbreaks:** Orchard trees reduce hot ambient wind speed, cutting crop transpiration demand by ~18%.`;
+      if (sugarcaneCount > 0) {
+        content += `- Sugarcane: High water demand. Will initiate internode shortening and reduce sucrose accumulation.\n`;
+      }
+      if (bananaCount > 0) {
+        content += `- Banana: Broadleaf foliage rapidly wilts to minimize transpiration surface.\n`;
+      }
+      if (wheatCount > 0 || carrotCount > 0) {
+        content += `- Wheat & Carrots: Stomata close to conserve moisture; root hairs lose turgor pressure and fibrous roots lignify.\n`;
+      }
+      if (treeCount > 0) {
+        content += `- Deep-Rooted Trees (Neem, Mango, Coconut): Resist topsoil drying and provide beneficial canopy shade.\n`;
+      }
+      content += `- Projected Yield Impact: Net harvest drops by **-${lossPct}%** (from ~${estYieldKg.toFixed(1)} kg to **${stressedYield.toFixed(1)} kg**).\n\n`;
+
+      content += `**Recommended Mitigations:**\n`;
+      if (waterCount === 0) {
+        content += `1. **Immediate Irrigation:** Add **Water Canals** or **Wells** adjacent to crop beds to maintain root-zone moisture above 60%.\n`;
+      } else {
+        content += `1. **Maintain Irrigation Network:** Your ${waterCount} water sources buffer the plot, limiting drought impact to only ~${lossPct}%.\n`;
+      }
+      content += `2. **Soil Cover with Grass Turf:** Place grass or mulch borders to reduce surface evaporation by up to 35%.\n`;
+      content += `3. **Windbreak Protection:** Position **Neem Trees** or **Orchard Trees** along the windward perimeter to reduce wind-driven evaporative stress.`;
     }
-    // 2. SCENARIO: Flood / Overwatering / Heavy Rain / Excess Water
+    // 2. SCENARIO: Flood / Overwatering / Heavy Rain / Excess Water / Storm
     else if (p.includes('flood') || p.includes('heavy rain') || p.includes('too much water') || p.includes('overwater') || p.includes('storm')) {
       actionType = 'flood_saturation_simulation';
-      content = `### 🌧️ Scenario Analysis: Heavy Rainfall & Soil Saturation\n\n`;
-      content = content + `**Soil Hydrodynamics:**\n`;
-      content = content + `- **Soil Water Saturation:** Moisture levels exceed \`85%\`, completely filling soil macropores and displacing dissolved oxygen.\n`;
-      content = content + `- **Root Hypoxia:** Lack of oxygen induces root suffocation within 48 hours, inhibiting active nutrient uptake.\n\n`;
-      content = content + `**Crop Specific Vulnerabilities:**\n`;
-      content = content + `- **Carrot Patches:** Highly vulnerable to taproot splitting, rot, and cavity spot in standing water.\n`;
-      content = content + `- **Wheat Plots:** Risk of root fungal pathogens (*Fusarium*) and lodging under waterlogged topsoil.\n\n`;
-      content = content + `**🛡️ Recommended Layout Adjustments:**\n`;
-      content = content + `1. Maintain perimeter drainage by flanking water canals with absorbent Grass Turf.\n`;
-      content = content + `2. Ensure crop rows are aligned on elevated beds (2×2m grid layout).`;
+      content = `### 🌧️ Scenario Analysis: Heavy Rainfall & Soil Waterlogging\n\n`;
+      content += `**Soil Hydrodynamics:**\n`;
+      content += `- Soil moisture exceeds 85%, saturating macropores and expelling dissolved soil oxygen.\n`;
+      content += `- Root hypoxia develops within 48 hours, inhibiting active nutrient uptake and respiration.\n\n`;
+
+      content += `**Crop-Specific Vulnerabilities:**\n`;
+      if (paddyCount > 0) {
+        content += `- Paddy Rice: Thrives in standing water. Paddy root aerenchyma tissue tolerates submersion up to 10 days.\n`;
+      }
+      if (carrotCount > 0) {
+        content += `- Carrot Patches: Severe risk. Root rot, cavity spot, and taproot splitting occur rapidly in waterlogged soil.\n`;
+      }
+      if (wheatCount > 0) {
+        content += `- Wheat Plots: Susceptible to fungal root pathogens (*Fusarium*, *Pythium*) and lodging under soggy topsoil.\n`;
+      }
+      if (bananaCount > 0 || sugarcaneCount > 0) {
+        content += `- Banana & Sugarcane: Benefit from elevated moisture but require adequate drainage to prevent pseudo-stem rot.\n`;
+      }
+      content += `\n**Recommended Layout Adjustments:**\n`;
+      content += `1. Align water-sensitive root crops (Carrots, Wheat) on elevated ridges.\n`;
+      content += `2. Channel excess runoff into dedicated **Water Canals** or **Ponds** at lower elevations.\n`;
+      content += `3. Separate standing-water crops (Paddy) from dry-land vegetables using border fences or stone paths.`;
     }
-    // 3. SCENARIO: Crop Comparison / What to plant / Wheat vs Carrot vs Trees
-    else if (p.includes('compare') || p.includes('carrot') || p.includes('wheat') || p.includes('tree') || p.includes('which crop') || p.includes('what to plant')) {
+    // 3. SCENARIO: Crop Comparison / What to plant
+    else if (p.includes('compare') || p.includes('which crop') || p.includes('what to plant') || p.includes('paddy') || p.includes('sugarcane')) {
       actionType = 'crop_comparative_analysis';
       content = `### 🌾 Crop Variety Comparison & Plot Suitability\n\n`;
-      content = content + `| Metric | 🌾 Wheat Crop | 🥕 Carrot Patch | 🌳 Orchard Tree |\n`;
-      content = content + `|---|---|---|---|\n`;
-      content = content + `| **Default Footprint** | 2.0 × 2.0 m (80×80px) | 2.0 × 2.0 m (80×80px) | 1.0 × 1.0 m (40×40px) |\n`;
-      content = content + `| **Root Depth** | 40–60 cm (fibrous) | 25–35 cm (taproot) | 80–120 cm (deep) |\n`;
-      content = content + `| **Water Demand ($K_c$)** | 1.15 (High at heading) | 1.05 (Moderate) | 0.85 (Steady) |\n`;
-      content = content + `| **Growth Cycle** | ~100–120 Days | ~70–80 Days | Perennial Harvest |\n`;
-      content = content + `| **Yield per Unit** | ~9.9 kg biomass | ~8.4 kg fresh root | ~12.0 kg fruit |\n\n`;
-      content = content + `**Agronomic Recommendation for Your Plot:**\n`;
+      content += `| Crop Variety | Water Demand | Root Depth | Harvest Cycle | Est. Yield/Plot |\n`;
+      content += `|---|---|---|---|---|\n`;
+      content += `| 🌾 Wheat Crop | Moderate (ET₀ × 1.15) | 40–60 cm | 100–120 Days | ~9.9 kg |\n`;
+      content += `| 🥕 Carrot Patch | Moderate (ET₀ × 1.05) | 25–35 cm | 70–80 Days | ~8.4 kg |\n`;
+      content += `| 🍚 Paddy Rice | Very High (Ponded) | 20–30 cm | 110–130 Days | ~18.0 kg |\n`;
+      content += `| 🎋 Sugarcane | High (1200mm) | 60–100 cm | 270–360 Days | ~32.0 kg |\n`;
+      content += `| 🍌 Banana Grove | High (ET₀ × 1.10) | 30–50 cm | Perennial | ~24.0 kg |\n`;
+      content += `| 🌳 Neem/Mango | Resilient (ET₀ × 0.80) | 100–200 cm | Perennial | ~12.0 kg |\n\n`;
+
+      content += `**Agronomic Recommendation for Your Farm:**\n`;
       if (crops.length === 0) {
-        content = content + `- Start by placing **2–4 Wheat crops** near a **Water Canal** for reliable high-calorie grain production, and add **Carrot patches** for faster harvest turnaround.`;
+        content += `- Place **Paddy Rice** or **Sugarcane** adjacent to **Water Canals** for high yields, and companion-plant **Wheat** or **Carrots** in well-drained central plots.`;
       } else {
-        content = content + `- You currently have **${wheatCount} Wheat** and **${carrotCount} Carrots**. This multi-crop polyculture helps diversify water uptake and pest resistance!`;
+        content += `- You currently have **${crops.length} crop beds** cultivated across **${farmStats?.cropSummary || 'multiple varieties'}**. Polyculture reduces pest outbreaks and stabilizes soil fertility!`;
       }
     }
     // 4. SCENARIO: Yield Estimation / Harvest Output / Biomass
     else if (p.includes('yield') || p.includes('harvest') || p.includes('how much') || p.includes('output') || p.includes('biomass') || p.includes('kg')) {
       actionType = 'yield_biomass_computation';
-      content = `### ⚖️ Projected Harvest & Yield Computation\n\n`;
+      content = `### ⚖️ Projected Harvest & Biomass Yield Computation\n\n`;
       if (totalItems === 0) {
-        content = content + `Currently, no crops are placed on the canvas. Drag Wheat, Carrots, or Orchard Trees from the palette onto the canvas to calculate projected yields.`;
+        content += `Currently, no crops are placed on the canvas. Drag Paddy, Wheat, Sugarcane, Carrots, or Orchard Trees from the palette onto the canvas to calculate projected yields.`;
       } else {
-        content = content + `**Yield Breakdown by Asset:**\n`;
-        if (wheatCount > 0) content = content + `- **Wheat (${wheatCount} plots):** ~${(wheatCount * 4.5 * 2.2).toFixed(1)} kg (${wheatCount} × 9.9 kg/plot)\n`;
-        if (carrotCount > 0) content = content + `- **Carrots (${carrotCount} plots):** ~${(carrotCount * 3.8 * 2.2).toFixed(1)} kg (${carrotCount} × 8.4 kg/plot)\n`;
-        if (treeCount > 0) content = content + `- **Orchard Trees (${treeCount} units):** ~${(treeCount * 12.0).toFixed(1)} kg fruit\n`;
-        content = content + `\n**Total Estimated Field Biomass:** **~${estYieldKg.toFixed(1)} kg**\n\n`;
-        content = content + `**Optimization Factors:**\n`;
-        content = content + `- **Irrigation Coefficient:** ${waterCount > 0 ? '1.0× (Optimal with water sources)' : '0.65× (Reduced due to moisture deficit)'}\n`;
-        content = content + `- **Canopy Spacing:** ${treeCount > 4 ? 'Dense tree canopy may shade understory crops' : 'Good solar exposure across beds'}`;
+        content += `**Yield Breakdown by Asset:**\n`;
+        if (paddyCount > 0) content += `- Paddy Rice (${paddyCount} plots): ~${(paddyCount * 18.0).toFixed(1)} kg\n`;
+        if (sugarcaneCount > 0) content += `- Sugarcane (${sugarcaneCount} plots): ~${(sugarcaneCount * 32.0).toFixed(1)} kg\n`;
+        if (bananaCount > 0) content += `- Banana Groves (${bananaCount} plots): ~${(bananaCount * 24.0).toFixed(1)} kg\n`;
+        if (wheatCount > 0) content += `- Wheat (${wheatCount} plots): ~${(wheatCount * 9.9).toFixed(1)} kg\n`;
+        if (carrotCount > 0) content += `- Carrots (${carrotCount} plots): ~${(carrotCount * 8.4).toFixed(1)} kg\n`;
+        if (tomatoCount > 0) content += `- Tomatoes (${tomatoCount} plots): ~${(tomatoCount * 11.2).toFixed(1)} kg\n`;
+        if (cornCount > 0) content += `- Sweet Corn (${cornCount} plots): ~${(cornCount * 14.5).toFixed(1)} kg\n`;
+        if (pumpkinCount > 0) content += `- Pumpkins (${pumpkinCount} plots): ~${(pumpkinCount * 22.0).toFixed(1)} kg\n`;
+        if (treeCount > 0) content += `- Orchard & Fruit Trees (${treeCount} units): ~${(treeCount * 12.0).toFixed(1)} kg fruit\n`;
+
+        content += `\n**Total Estimated Plot Biomass:** **~${estYieldKg.toFixed(1)} kg**\n\n`;
+        content += `**Yield Optimization Multipliers:**\n`;
+        content += `- Irrigation Factor: ${waterCount > 0 ? '1.0× (Optimal with irrigation sources)' : '0.65× (Yield penalized due to moisture stress)'}\n`;
+        content += `- Canopy & Spacing: ${treeCount > 0 ? 'Trees provide windbreak and microclimate stabilization' : 'Add perimeter trees to protect against wind desiccation'}`;
       }
     }
-    // 5. SCENARIO: Layout / Advice / General Inspection
+    // 5. SCENARIO: Layout / General Diagnosis
     else {
       actionType = 'farm_plot_inspection';
       content = `### 🌾 Plot Field Diagnosis & Agronomic Status\n\n`;
       if (totalItems === 0) {
-        content = content + `Your farm canvas is currently empty.\n\n`;
-        content = content + `**Recommended Next Steps:**\n`;
-        content = content + `1. Drag **Wheat** or **Carrot** patches from the left sidebar onto the canvas.\n`;
-        content = content + `2. Place a **Water Canal** adjacent to your crops to secure drip irrigation.\n`;
-        content = content + `3. Surround with a **Wood Fence** to mark your plot boundaries.`;
+        content += `Your farm canvas is currently empty.\n\n`;
+        content += `**Recommended Next Steps:**\n`;
+        content += `1. Drag **Paddy Rice**, **Wheat**, or **Carrot** patches onto the canvas.\n`;
+        content += `2. Place a **Water Canal** adjacent to your crops to secure steady irrigation.\n`;
+        content += `3. Surround with a **Wood Fence** or **Neem Trees** to define your perimeter.`;
       } else {
-        content = content + `**Current Canvas Assets:**\n`;
-        content = content + `- **Active Crops:** ${crops.length} plots (${wheatCount} Wheat, ${carrotCount} Carrots)\n`;
-        content = content + `- **Infrastructure:** ${waterCount} Water Canals, ${treeCount} Trees, ${fenceCount} Fences, ${grassCount} Grass Plots\n`;
-        content = content + `- **Projected Harvest:** **~${estYieldKg.toFixed(1)} kg**\n\n`;
+        content += `**Current Canvas Assets:**\n`;
+        content += `- Active Crops: ${crops.length} plots (${farmStats?.cropSummary || 'Crops placed'})\n`;
+        content += `- Infrastructure: ${waterCount} Irrigation Sources, ${treeCount} Trees, ${fenceCount} Fences, ${grassCount} Grass Plots\n`;
+        content += `- Projected Harvest: **~${estYieldKg.toFixed(1)} kg**\n\n`;
 
-        content = content + `**Soil & Water Balance:**\n`;
+        content += `**Soil & Water Balance:**\n`;
         if (waterCount === 0 && crops.length > 0) {
-          content = content + `- ⚠️ **Water Deficit Alert:** No water bodies placed on the farm! Add a **Water Canal** adjacent to crop beds to prevent drought stress.\n`;
+          content += `- ⚠️ Water Deficit Alert: No irrigation placed on the farm! Add a **Water Canal** or **Well** adjacent to crop beds to prevent drought stress.\n`;
         } else {
-          content = content + `- ✅ **Hydration:** Irrigation coverage is active. Root-zone soil moisture is balanced.\n`;
+          content += `- ✅ Hydration: Irrigation coverage is active. Root-zone soil moisture is balanced.\n`;
         }
 
-        content = content + `\n**What-If Questions You Can Ask Me:**\n`;
-        content = content + `- *"What will happen if a 2-week drought hits?"*\n`;
-        content = content + `- *"What if there is heavy flood / rainfall?"*\n`;
-        content = content + `- *"Compare wheat vs carrots for this layout"*\n`;
-        content = content + `- *"How much yield will I harvest from this plot?"*`;
+        content += `\n**What-If Questions You Can Ask Me:**\n`;
+        content += `- *"What will happen if a 2-week drought hits?"*\n`;
+        content += `- *"What if there is heavy flood / rainfall?"*\n`;
+        content += `- *"Compare wheat vs paddy vs sugarcane for this layout"*\n`;
+        content += `- *"How can I improve my crop yield and layout?"*`;
       }
     }
 

@@ -90,6 +90,66 @@ export const FarmCanvas = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo, selectedId, duplicateItem, deleteItem, deselectAll]);
 
+  // Pan state for canvas drag navigation
+  const isPanning = useRef(false);
+  const panStart = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
+
+  // Mouse wheel zoom (Ctrl+Wheel or Pinch) and Canvas Drag Panning
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+
+    const onWheel = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.1 : -0.1;
+        setZoom((prevZoom) => {
+          const current = typeof prevZoom === 'function' ? 1.0 : prevZoom;
+          const next = Math.max(0.4, Math.min(2.5, Number((current + delta).toFixed(2))));
+          return next;
+        });
+      }
+    };
+
+    const onMouseDown = (e) => {
+      // Middle click (wheel) or clicking empty canvas background allows panning
+      if (e.button === 1 || (e.button === 0 && (e.target === el || e.target.classList?.contains('canvas-background')))) {
+        if (e.button === 1) e.preventDefault();
+        isPanning.current = true;
+        panStart.current = {
+          x: e.clientX,
+          y: e.clientY,
+          scrollLeft: el.scrollLeft,
+          scrollTop: el.scrollTop,
+        };
+      }
+    };
+
+    const onMouseMove = (e) => {
+      if (!isPanning.current) return;
+      const dx = e.clientX - panStart.current.x;
+      const dy = e.clientY - panStart.current.y;
+      el.scrollLeft = panStart.current.scrollLeft - dx;
+      el.scrollTop = panStart.current.scrollTop - dy;
+    };
+
+    const onMouseUp = () => {
+      isPanning.current = false;
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      window.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [setZoom]);
+
   const handleDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
@@ -105,8 +165,8 @@ export const FarmCanvas = () => {
       if (!canvasRef.current) return;
 
       const rect = canvasRef.current.getBoundingClientRect();
-      const dropX = (e.clientX - rect.left) / zoom;
-      const dropY = (e.clientY - rect.top) / zoom;
+      const dropX = (e.clientX - rect.left + canvasRef.current.scrollLeft) / zoom;
+      const dropY = (e.clientY - rect.top + canvasRef.current.scrollTop) / zoom;
 
       // Center the dropped item at mouse pointer
       const rawX = dropX - itemDef.defaultWidth / 2;
@@ -138,7 +198,8 @@ export const FarmCanvas = () => {
     if (
       e.target === canvasRef.current || 
       e.target.classList.contains('canvas-background') ||
-      e.target.classList.contains('canvas-transform-layer')
+      e.target.classList.contains('canvas-transform-layer') ||
+      e.target.classList.contains('canvas-sizer-layer')
     ) {
       deselectAll();
     }
@@ -146,6 +207,8 @@ export const FarmCanvas = () => {
 
   const boundaryWidthPx = metersToPx(farmSettings?.boundaryWidthM || 100);
   const boundaryHeightPx = metersToPx(farmSettings?.boundaryHeightM || 100);
+  const baseCanvasWidth = Math.max(3200, boundaryWidthPx + 600);
+  const baseCanvasHeight = Math.max(2600, boundaryHeightPx + 600);
 
   return (
     <main
@@ -153,7 +216,7 @@ export const FarmCanvas = () => {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={handleCanvasClick}
-      className="relative flex-1 h-full farm-canvas-grid farm-canvas-grid-fine overflow-auto select-none"
+      className="relative flex-1 min-h-0 min-w-0 w-full h-full farm-canvas-grid farm-canvas-grid-fine overflow-auto select-none"
     >
       {/* Editor Compact Action Toolbar (Undo, Redo, Duplicate, Delete, Zoom, Snap, Clear, Dimensions) */}
       <EditorToolbar onOpenFarmSettings={() => setShowBoundaryModal(true)} />
@@ -167,15 +230,24 @@ export const FarmCanvas = () => {
         onClose={() => setShowBoundaryModal(false)}
       />
 
-      {/* Transformable Canvas Layer with Zoom Scaling */}
+      {/* Exact-scale container so scrollbars dynamically reflect both horizontal and vertical virtual dimensions */}
       <div
-        className="canvas-transform-layer relative min-w-full min-h-full transition-transform duration-100 ease-out origin-top-left"
+        className="canvas-sizer-layer relative"
         style={{
-          transform: `scale(${zoom})`,
-          width: `${Math.max(2800, boundaryWidthPx + 400)}px`,
-          height: `${Math.max(2200, boundaryHeightPx + 400)}px`,
+          width: `${Math.round(baseCanvasWidth * zoom)}px`,
+          height: `${Math.round(baseCanvasHeight * zoom)}px`,
         }}
       >
+        {/* Transformable Canvas Layer with Zoom Scaling */}
+        <div
+          className="canvas-transform-layer absolute top-0 left-0 transition-transform duration-75 ease-out origin-top-left"
+          style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: '0 0',
+            width: `${baseCanvasWidth}px`,
+            height: `${baseCanvasHeight}px`,
+          }}
+        >
         {/* Real-World Farm Boundary Marker Fence & Dimensions */}
         <div 
           className="absolute border-2 border-dashed border-amber-600/50 rounded-2xl pointer-events-none transition-all shadow-[0_0_50px_rgba(217,119,6,0.06)]"
@@ -291,6 +363,7 @@ export const FarmCanvas = () => {
             />
           ))}
         </AnimatePresence>
+        </div>
       </div>
 
       {/* Subdued Bottom-Right Coordinates / Grid Status */}

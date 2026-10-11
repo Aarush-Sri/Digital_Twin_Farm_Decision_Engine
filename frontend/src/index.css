@@ -13,25 +13,26 @@
   }
 }
 
-/* Stardew Valley & Clash of Clans Farm Meadow Background */
+/* Stardew Valley Farm Meadow Background (from user texture) */
 .farm-canvas-grid {
-  background-color: #244b15;
+  background-color: #72a93b;
   background-image: 
-    linear-gradient(to right, rgba(0, 0, 0, 0.12) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 1px, transparent 1px),
-    url('/assets/grass_tile.png');
-  background-size: 20px 20px, 20px 20px, 240px 137px;
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    url('/assets/grass_bg_stardew.png');
+  background-size: 20px 20px, 20px 20px, 324px 190px;
   background-repeat: repeat, repeat, repeat;
   image-rendering: pixelated;
 }
 
 .farm-canvas-grid-fine {
+  background-color: #72a93b;
   background-image: 
-    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.16) 1px, transparent 0),
-    linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
-    url('/assets/grass_tile.png');
-  background-size: 20px 20px, 40px 40px, 40px 40px, 240px 137px;
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.12) 1px, transparent 0),
+    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    url('/assets/grass_bg_stardew.png');
+  background-size: 20px 20px, 40px 40px, 40px 40px, 324px 190px;
   background-repeat: repeat, repeat, repeat, repeat;
   image-rendering: pixelated;
 }

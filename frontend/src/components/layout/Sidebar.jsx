@@ -74,55 +74,55 @@ export const Sidebar = () => {
   }, [filteredItems, selectedCategory]);
 
   return (
-    <aside className="w-80 md:w-88 h-full flex flex-col bg-stone-950 border-r border-amber-950/80 z-20 select-none shadow-2xl">
+    <aside className="w-84 md:w-92 h-full flex flex-col bg-stone-950 border-r border-amber-950/80 z-20 select-none shadow-2xl">
       {/* Sidebar Header */}
-      <div className="p-3.5 border-b border-amber-950/80 bg-gradient-to-b from-stone-900 via-stone-950 to-stone-950 space-y-3">
+      <div className="p-4 border-b border-amber-950/80 bg-gradient-to-b from-stone-900 via-stone-950 to-stone-950 space-y-3.5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 rounded bg-amber-900/60 border border-amber-600/60 flex items-center justify-center text-amber-300">
-              <Layers className="w-3.5 h-3.5" />
+          <div className="flex items-center space-x-2.5">
+            <div className="w-7 h-7 rounded-lg bg-amber-900/60 border border-amber-600/60 flex items-center justify-center text-amber-300 shadow-inner">
+              <Layers className="w-4 h-4" />
             </div>
             <h2 className="text-xs font-bold tracking-wider text-amber-100 uppercase">
               Farm Palette
             </h2>
           </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800/60">
+          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800/60 shadow-sm">
             {filteredItems.length} Elements
           </span>
         </div>
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-500" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search elements (wheat, neem, well)..."
-            className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-stone-900/90 border border-stone-800 focus:border-amber-500 text-xs text-amber-100 placeholder-stone-500 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
+            className="w-full pl-9 pr-8 py-2 rounded-xl bg-stone-900/90 border border-stone-800 focus:border-amber-500 text-xs text-amber-100 placeholder-stone-500 focus:outline-none focus:ring-1 focus:ring-amber-500/40 shadow-inner"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-amber-200"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-amber-200"
             >
-              <X className="w-3 h-3" />
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
         {/* Category Filter Pills (Terrain, Crops, Trees, Structures, Irrigation) */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar pb-0.5 text-[11px]">
+        <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-1 text-[11px]">
           {FARM_CATEGORIES.map((cat) => {
             const isActive = selectedCategory === cat;
             return (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`flex-shrink-0 px-2.5 py-1 rounded-md font-medium transition-all ${
+                className={`flex-shrink-0 px-3 py-1.5 rounded-lg font-medium transition-all ${
                   isActive
-                    ? 'bg-amber-600 text-stone-950 font-bold shadow-sm'
-                    : 'bg-stone-900/80 text-stone-400 hover:text-stone-200 hover:bg-stone-800 border border-stone-800/60'
+                    ? 'bg-amber-600 text-stone-950 font-bold shadow-md'
+                    : 'bg-stone-900/80 text-stone-400 hover:text-stone-200 hover:bg-stone-850 border border-stone-800/70'
                 }`}
               >
                 {cat}
@@ -133,9 +133,9 @@ export const Sidebar = () => {
       </div>
 
       {/* Item List (Grouped or Filtered) */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-5">
         {categoriesToDisplay.length === 0 ? (
-          <div className="p-6 text-center text-xs text-stone-500 space-y-1">
+          <div className="p-8 text-center text-xs text-stone-500 space-y-1.5">
             <Filter className="w-6 h-6 mx-auto text-stone-600 mb-2" />
             <p className="font-semibold text-stone-400">No elements found</p>
             <p className="text-[10px]">Try clearing search or switching category filter.</p>
@@ -144,14 +144,14 @@ export const Sidebar = () => {
           categoriesToDisplay.map((catGroup) => {
             const isCollapsed = Boolean(collapsedCategories[catGroup.name]);
             return (
-              <div key={catGroup.name} className="space-y-1.5">
+              <div key={catGroup.name} className="space-y-2.5">
                 {/* Category Header Accordion */}
                 <button
                   type="button"
                   onClick={() => toggleCategoryCollapse(catGroup.name)}
-                  className="w-full flex items-center justify-between py-1 px-1.5 text-left rounded hover:bg-stone-900/60 transition-colors"
+                  className="w-full flex items-center justify-between py-1.5 px-2 text-left rounded-lg hover:bg-stone-900/60 transition-colors"
                 >
-                  <div className="flex items-center space-x-1.5">
+                  <div className="flex items-center space-x-2">
                     {isCollapsed ? (
                       <ChevronRight className="w-3.5 h-3.5 text-stone-500" />
                     ) : (
@@ -161,14 +161,14 @@ export const Sidebar = () => {
                       {catGroup.name}
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-stone-900 text-stone-400 border border-stone-800">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-stone-900 text-stone-400 border border-stone-800">
                     {catGroup.items.length}
                   </span>
                 </button>
 
                 {/* Cards in this Category */}
                 {!isCollapsed && (
-                  <div className="space-y-2 pl-1">
+                  <div className="space-y-2.5 pl-1">
                     {catGroup.items.map((item) => (
                       <PaletteCard
                         key={item.type}

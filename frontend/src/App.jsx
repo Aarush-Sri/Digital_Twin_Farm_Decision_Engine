@@ -11,7 +11,7 @@ function MainLayout() {
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-canvas text-text-main font-sans">
       <Header onOpenAgentChat={() => setIsAgentChatOpen(true)} />
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden relative">
         <Sidebar />
         <FarmCanvas />
       </div>

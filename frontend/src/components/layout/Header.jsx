@@ -58,9 +58,9 @@ export const Header = ({ onOpenAgentChat }) => {
 
   return (
     <>
-      <header className="h-16 border-b border-amber-950/80 bg-gradient-to-r from-stone-950 via-stone-900 to-stone-950 px-4 md:px-5 flex items-center justify-between select-none z-30 shadow-xl">
+      <header className="h-16 md:h-18 border-b border-amber-950/80 bg-gradient-to-r from-stone-950 via-stone-900 to-stone-950 px-5 md:px-6 flex items-center justify-between select-none z-30 shadow-xl">
         {/* Left: Title & Brand */}
-        <div className="flex items-center space-x-3 flex-shrink-0">
+        <div className="flex items-center space-x-4 flex-shrink-0">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600 to-amber-900 border-2 border-amber-400/80 flex items-center justify-center text-amber-100 shadow-md transform hover:rotate-3 transition-transform">
             <Sprout className="w-6 h-6 drop-shadow" />
           </div>
@@ -68,19 +68,19 @@ export const Header = ({ onOpenAgentChat }) => {
             <div className="flex items-center space-x-2">
               <h1 className="text-base font-extrabold text-amber-200 tracking-wide font-sans drop-shadow-sm flex items-center space-x-2">
                 <span>DigiFarm</span>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-700/60 shadow-sm">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-700/60 shadow-sm">
                   Farm Canvas
                 </span>
               </h1>
             </div>
-            <p className="text-[10px] text-stone-400 font-medium truncate max-w-[200px] sm:max-w-none">
+            <p className="text-[11px] text-stone-400 font-medium truncate max-w-[200px] sm:max-w-none">
               {farmSettings?.name || 'AgriTwin'} • {farmSettings?.location || 'Zone 6b'}
             </p>
           </div>
         </div>
 
         {/* Center: Reorganized Agricultural Decision HUD */}
-        <div className="hidden xl:flex items-center space-x-2.5 text-xs">
+        <div className="hidden xl:flex items-center space-x-3.5 text-xs">
           {/* 1. Weather & Forecast Horizon (Clickable for inspection) */}
           <button
             type="button"
@@ -147,14 +147,14 @@ export const Header = ({ onOpenAgentChat }) => {
         </div>
 
         {/* Right Action Controls: AI Agronomist + Editing Tools */}
-        <div className="flex items-center space-x-2 flex-shrink-0">
+        <div className="flex items-center space-x-3.5 flex-shrink-0">
           {/* Ask AI Agent Drawer Button (With scenario-ready state indicator) */}
           <button
             type="button"
             onClick={onOpenAgentChat}
-            className={`group relative flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold text-stone-950 transition-all active:scale-95 ${
+            className={`group relative flex items-center space-x-2.5 px-4 py-2.5 rounded-xl text-xs font-bold text-stone-950 transition-all active:scale-95 shadow-md ${
               items.length > 0
-                ? 'bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 border-2 border-yellow-200 shadow-[0_0_18px_rgba(250,204,21,0.5)]'
+                ? 'bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 border-2 border-yellow-200 shadow-[0_0_20px_rgba(250,204,21,0.55)]'
                 : 'bg-stone-800 text-stone-300 hover:bg-stone-700 border border-stone-700'
             }`}
             title="Open AI Agronomist Decision Engine & Simulation Panel"
@@ -162,17 +162,17 @@ export const Header = ({ onOpenAgentChat }) => {
             <Sparkles className="w-4 h-4 text-stone-950 group-hover:rotate-12 transition-transform" />
             <span className="tracking-wide uppercase font-sans">⚡ Ask AI Agronomist</span>
             {items.length > 0 && (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping absolute -top-0.5 -right-0.5" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping absolute -top-0.5 -right-0.5" />
             )}
           </button>
 
           <div className="h-6 w-px bg-stone-800 mx-1 hidden sm:block" />
 
-          {/* Snap to Grid (Keep visible for quick access & tests) */}
+          {/* Snap to Grid */}
           <button
             type="button"
             onClick={toggleSnap}
-            className={`hidden sm:flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all border ${
+            className={`hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-mono transition-all border ${
               snapToGrid
                 ? 'bg-emerald-950/80 text-emerald-300 border-emerald-600/70 shadow-sm'
                 : 'bg-stone-900 text-stone-400 border-stone-800 hover:text-stone-200'
@@ -188,7 +188,7 @@ export const Header = ({ onOpenAgentChat }) => {
             type="button"
             onClick={handleClear}
             disabled={items.length === 0}
-            className={`hidden sm:flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs transition-all border ${
+            className={`hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs transition-all border ${
               items.length > 0
                 ? 'bg-stone-900 text-stone-300 border-stone-800 hover:bg-red-950/50 hover:text-red-300 hover:border-red-700/60'
                 : 'bg-stone-900/40 text-stone-600 border-stone-900 cursor-not-allowed'

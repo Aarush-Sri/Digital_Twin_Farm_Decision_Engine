@@ -41,12 +41,12 @@ export const EditorToolbar = ({ onOpenFarmSettings }) => {
   };
 
   const handleZoomIn = () => {
-    const next = Math.min(2.0, Number((zoom + 0.15).toFixed(2)));
+    const next = Math.min(2.5, Number((zoom + 0.15).toFixed(2)));
     setZoom(next);
   };
 
   const handleZoomOut = () => {
-    const next = Math.max(0.5, Number((zoom - 0.15).toFixed(2)));
+    const next = Math.max(0.4, Number((zoom - 0.15).toFixed(2)));
     setZoom(next);
   };
 
@@ -55,7 +55,7 @@ export const EditorToolbar = ({ onOpenFarmSettings }) => {
   };
 
   return (
-    <div className="absolute top-3 left-4 z-30 flex items-center space-x-1.5 p-1.5 rounded-xl bg-stone-950/90 backdrop-blur-md border border-amber-900/70 shadow-2xl select-none text-xs">
+    <div className="absolute top-4 left-5 z-30 flex items-center space-x-2.5 p-2 rounded-2xl bg-stone-950/95 backdrop-blur-md border border-amber-900/80 shadow-2xl select-none text-xs">
       {/* 1. History (Undo / Redo) */}
       <div className="flex items-center space-x-0.5 pr-1.5 border-r border-stone-800">
         <button
@@ -120,21 +120,21 @@ export const EditorToolbar = ({ onOpenFarmSettings }) => {
       </div>
 
       {/* 3. Zoom Controls */}
-      <div className="flex items-center space-x-1 pr-1.5 border-r border-stone-800 font-mono">
+      <div className="flex items-center space-x-1.5 pr-2 border-r border-stone-800 font-mono">
         <button
           type="button"
           onClick={handleZoomOut}
-          disabled={zoom <= 0.5}
-          className="p-1 rounded text-stone-300 hover:bg-stone-800 hover:text-amber-200 disabled:text-stone-600 disabled:cursor-not-allowed"
+          disabled={zoom <= 0.4}
+          className="p-1.5 rounded-lg text-stone-300 hover:bg-stone-800 hover:text-amber-200 disabled:text-stone-600 disabled:cursor-not-allowed"
           title="Zoom Out (Ctrl -)"
         >
-          <ZoomOut className="w-3 h-3" />
+          <ZoomOut className="w-3.5 h-3.5" />
         </button>
 
         <button
           type="button"
           onClick={handleZoomReset}
-          className="px-1.5 py-0.5 rounded text-[10px] text-amber-300 hover:bg-stone-800 tracking-tighter"
+          className="px-2 py-0.5 rounded text-[11px] font-bold text-amber-300 hover:bg-stone-800 tracking-tight"
           title="Reset Zoom to 100%"
         >
           {Math.round(zoom * 100)}%
@@ -143,11 +143,11 @@ export const EditorToolbar = ({ onOpenFarmSettings }) => {
         <button
           type="button"
           onClick={handleZoomIn}
-          disabled={zoom >= 2.0}
-          className="p-1 rounded text-stone-300 hover:bg-stone-800 hover:text-amber-200 disabled:text-stone-600 disabled:cursor-not-allowed"
+          disabled={zoom >= 2.5}
+          className="p-1.5 rounded-lg text-stone-300 hover:bg-stone-800 hover:text-amber-200 disabled:text-stone-600 disabled:cursor-not-allowed"
           title="Zoom In (Ctrl +)"
         >
-          <ZoomIn className="w-3 h-3" />
+          <ZoomIn className="w-3.5 h-3.5" />
         </button>
       </div>
 
