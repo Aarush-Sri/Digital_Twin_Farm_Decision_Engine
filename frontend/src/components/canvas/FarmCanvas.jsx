@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useFarm } from '../../hooks/useFarm';
 import { FarmItem } from './FarmItem';
-import { Sparkles, Grid, MapPin, Compass } from 'lucide-react';
+import { Sparkles, Grid, MapPin, Compass, LayoutTemplate } from 'lucide-react';
 import { EditorToolbar } from '../toolbar/EditorToolbar';
 import { ObjectInspector } from '../inspector/ObjectInspector';
 import { FarmBoundaryModal } from '../settings/FarmBoundaryModal';
@@ -27,7 +27,8 @@ export const FarmCanvas = () => {
     zoom,
     setZoom,
     farmSettings,
-    farmStats
+    farmStats,
+    loadPresetFarm,
   } = useFarm();
 
   const canvasRef = useRef(null);
@@ -100,20 +101,39 @@ export const FarmCanvas = () => {
     if (!el) return;
 
     const onWheel = (e) => {
+      // 1. Zoom with Ctrl/Cmd + Wheel or Trackpad Pinch
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
-        const delta = e.deltaY < 0 ? 0.1 : -0.1;
-        setZoom((prevZoom) => {
-          const current = typeof prevZoom === 'function' ? 1.0 : prevZoom;
-          const next = Math.max(0.4, Math.min(2.5, Number((current + delta).toFixed(2))));
-          return next;
-        });
+        const delta = e.deltaY < 0 ? 0.15 : -0.15;
+        const current = Number(zoom) || 1.0;
+        const next = Math.max(0.4, Math.min(2.5, Number((current + delta).toFixed(2))));
+        setZoom(next);
+        return;
+      }
+
+      // 2. Smooth 2D Vertical & Horizontal Scrolling
+      e.preventDefault();
+      if (e.shiftKey) {
+        // Shift+Wheel scrolls horizontally
+        el.scrollLeft += e.deltaY;
+      } else {
+        // Standard wheel: vertical deltaY to scrollTop, horizontal deltaX to scrollLeft
+        el.scrollTop += e.deltaY;
+        if (e.deltaX) {
+          el.scrollLeft += e.deltaX;
+        }
       }
     };
 
     const onMouseDown = (e) => {
-      // Middle click (wheel) or clicking empty canvas background allows panning
-      if (e.button === 1 || (e.button === 0 && (e.target === el || e.target.classList?.contains('canvas-background')))) {
+      // Middle click (wheel) or clicking empty canvas background / transform layer allows drag panning
+      const isCanvasBackground = 
+        e.target === el || 
+        e.target.classList?.contains('canvas-background') ||
+        e.target.classList?.contains('canvas-sizer-layer') ||
+        e.target.classList?.contains('canvas-transform-layer');
+
+      if (e.button === 1 || (e.button === 0 && isCanvasBackground)) {
         if (e.button === 1) e.preventDefault();
         isPanning.current = true;
         panStart.current = {
@@ -148,7 +168,7 @@ export const FarmCanvas = () => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
     };
-  }, [setZoom]);
+  }, [zoom, setZoom]);
 
   const handleDragOver = (e) => {
     e.preventDefault();

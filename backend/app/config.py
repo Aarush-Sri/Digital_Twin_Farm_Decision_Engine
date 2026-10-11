@@ -18,9 +18,9 @@ class Settings(BaseModel):
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     ENABLE_GOOGLE_SEARCH: bool = os.getenv("ENABLE_GOOGLE_SEARCH", "true").lower() == "true"
 
-    # Ollama Fallback
+    # Ollama Fallback (Default to Qwen 3.5 / 2.5)
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen3.5")
 
     # Simulation Defaults
     DEFAULT_GRID_WIDTH: int = 10

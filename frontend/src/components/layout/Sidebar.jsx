@@ -74,9 +74,9 @@ export const Sidebar = () => {
   }, [filteredItems, selectedCategory]);
 
   return (
-    <aside className="w-84 md:w-92 h-full flex flex-col bg-stone-950 border-r border-amber-950/80 z-20 select-none shadow-2xl">
+    <aside className="w-84 md:w-92 h-full flex flex-col bg-stone-950/55 backdrop-blur-md border-r border-amber-950/70 z-20 select-none shadow-2xl">
       {/* Sidebar Header */}
-      <div className="p-4 border-b border-amber-950/80 bg-gradient-to-b from-stone-900 via-stone-950 to-stone-950 space-y-3.5">
+      <div className="p-4 border-b border-amber-950/70 bg-stone-950/70 backdrop-blur-sm space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
             <div className="w-7 h-7 rounded-lg bg-amber-900/60 border border-amber-600/60 flex items-center justify-center text-amber-300 shadow-inner">

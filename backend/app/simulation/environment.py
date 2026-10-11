@@ -7,9 +7,21 @@ from .models import EnvironmentState
 class EnvironmentEngine:
     """Calculates daily solar radiation, diurnal cycle, temperature, and reference evapotranspiration."""
 
-    def __init__(self, latitude_deg: float = 35.0, seed: Optional[int] = 42):
+    def __init__(
+        self,
+        latitude_deg: float = 35.0,
+        elevation_m: float = 25.0,
+        base_temp_c: float = 22.0,
+        diurnal_range_c: float = 12.0,
+        mean_wind_speed_ms: float = 2.5,
+        seed: Optional[int] = 42,
+    ):
         self.latitude_deg = latitude_deg
         self.latitude_rad = math.radians(latitude_deg)
+        self.elevation_m = elevation_m
+        self.base_temp_c = base_temp_c
+        self.diurnal_range_c = diurnal_range_c
+        self.mean_wind_speed_ms = mean_wind_speed_ms
         if seed is not None:
             random.seed(seed)
 
@@ -59,11 +71,12 @@ class EnvironmentEngine:
         rs_mj = (as_const + bs_const * sun_ratio) * ra_mj
         solar_radiation_wm2 = round((rs_mj * 1_000_000) / (sunlight_hours * 3600), 1)
 
-        # 7. Diurnal Temperature Curve
-        seasonal_temp_base = 22.0 + 8.0 * math.sin(math.radians((360 / 365) * (doy - 110)))
-        temp_variation = random.uniform(-2.5, 2.5)
+        # 7. Diurnal Temperature Curve with elevation lapse rate
+        lapse_rate = (self.elevation_m / 1000.0) * 2.0
+        seasonal_temp_base = self.base_temp_c + 8.0 * math.sin(math.radians((360 / 365) * (doy - 110))) - lapse_rate
+        temp_variation = random.uniform(-2.0, 2.0)
         temp_avg_c = seasonal_temp_base + temp_variation - (cloud_factor * 2.0)
-        diurnal_range = 10.0 * (1.0 - 0.5 * cloud_factor)
+        diurnal_range = self.diurnal_range_c * (1.0 - 0.5 * cloud_factor)
         temp_min_c = round(temp_avg_c - (diurnal_range / 2), 1)
         temp_max_c = round(temp_avg_c + (diurnal_range / 2), 1)
         temp_avg_c = round((temp_min_c + temp_max_c) / 2, 1)
@@ -74,9 +87,9 @@ class EnvironmentEngine:
         et0_mm = 0.0023 * (temp_avg_c + 17.8) * math.sqrt(temp_diff) * ra_mm
         et0_mm = max(0.5, round(et0_mm, 2))
 
-        # Humidity & wind
+        # Humidity & wind (centered on mean_wind_speed_ms)
         humidity_pct = round(min(98.0, max(25.0, 60.0 + (rainfall_mm * 2) - (temp_avg_c * 0.5))), 1)
-        wind_speed_ms = round(random.uniform(1.2, 4.5), 1)
+        wind_speed_ms = round(max(0.5, random.uniform(self.mean_wind_speed_ms * 0.8, self.mean_wind_speed_ms * 1.25)), 1)
 
         # Apply overrides if provided
         if weather_override:

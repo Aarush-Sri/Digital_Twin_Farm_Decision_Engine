@@ -241,12 +241,20 @@ class RuleBasedFallbackProvider(BaseLLMProvider):
 
 
 class FallbackLLMManager(BaseLLMProvider):
-    """Manages primary Gemini provider with automatic failover to Ollama and plot-aware rule-based fallback."""
+    """Manages primary Gemini provider with automatic failover to Ollama (Qwen) and plot-aware rule-based fallback."""
 
-    def __init__(self):
-        self.gemini = GeminiProvider() if settings.GEMINI_API_KEY else None
-        self.ollama = OllamaProvider()
+    def __init__(
+        self,
+        gemini_api_key: Optional[str] = None,
+        gemini_model: Optional[str] = None,
+        ollama_model: Optional[str] = None,
+        preferred_provider: Optional[str] = "auto",
+    ):
+        active_key = (gemini_api_key or settings.GEMINI_API_KEY or "").strip()
+        self.gemini = GeminiProvider(api_key=active_key, model=gemini_model) if active_key else None
+        self.ollama = OllamaProvider(model=ollama_model or settings.OLLAMA_MODEL)
         self.fallback = RuleBasedFallbackProvider()
+        self.preferred_provider = (preferred_provider or "auto").lower()
 
     async def generate_response(
         self,
@@ -254,22 +262,40 @@ class FallbackLLMManager(BaseLLMProvider):
         tools: Optional[List[ToolDefinition]] = None,
         temperature: float = 0.2,
     ) -> LLMResponse:
-        # 1. Try Gemini if configured
-        if self.gemini and settings.GEMINI_API_KEY:
+        # Route 1: Direct Ollama preference requested
+        if self.preferred_provider == "ollama":
+            try:
+                return await self.ollama.generate_response(messages, tools=tools, temperature=temperature)
+            except Exception as e:
+                logger.warning(f"Ollama provider failed: {e}. Falling back to Rule-Based Agent...")
+            return await self.fallback.generate_response(messages, tools=tools, temperature=temperature)
+
+        # Route 2: Gemini preference or Auto mode
+        if self.gemini and self.gemini.is_configured():
             try:
                 return await self.gemini.generate_response(messages, tools=tools, temperature=temperature)
             except Exception as e:
                 logger.warning(f"Gemini provider failed: {e}. Falling back to Ollama...")
 
-        # 2. Try Ollama
+        # Route 3: Ollama with Qwen 3.5 / 2.5
         try:
             return await self.ollama.generate_response(messages, tools=tools, temperature=temperature)
         except Exception as e:
             logger.warning(f"Ollama provider failed: {e}. Falling back to Rule-Based Agent...")
 
-        # 3. Fallback to Plot-Aware Rule-Based Provider
+        # Route 4: Fallback to Plot-Aware Rule-Based Provider
         return await self.fallback.generate_response(messages, tools=tools, temperature=temperature)
 
 
-def get_llm_provider() -> BaseLLMProvider:
-    return FallbackLLMManager()
+def get_llm_provider(
+    gemini_api_key: Optional[str] = None,
+    gemini_model: Optional[str] = None,
+    ollama_model: Optional[str] = None,
+    preferred_provider: Optional[str] = "auto",
+) -> BaseLLMProvider:
+    return FallbackLLMManager(
+        gemini_api_key=gemini_api_key,
+        gemini_model=gemini_model,
+        ollama_model=ollama_model,
+        preferred_provider=preferred_provider,
+    )

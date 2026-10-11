@@ -192,4 +192,36 @@ describe('Farm Reducer State Transitions', () => {
     expect(state.simulationLogs).toHaveLength(1);
     expect(state.simulationLogs[0].avg_crop_health).toBe(98.0);
   });
+
+  it('handles farm profile updates cleanly', () => {
+    const state = farmReducer(INITIAL_STATE, {
+      type: ACTION_TYPES.SET_FARM_PROFILE,
+      payload: {
+        profile: {
+          farm_name: 'Prairie Creek Farm',
+          location_name: 'Kansas Basin',
+          latitude_deg: 38.5,
+          soil_texture: 'silt',
+          baseline_ph: 6.8,
+        },
+      },
+    });
+
+    expect(state.farmProfile.farm_name).toBe('Prairie Creek Farm');
+    expect(state.farmProfile.location_name).toBe('Kansas Basin');
+    expect(state.farmProfile.latitude_deg).toBe(38.5);
+    expect(state.farmProfile.soil_texture).toBe('silt');
+    expect(state.farmName).toBe('Prairie Creek Farm');
+  });
+
+  it('loads preset farm items and resets nextZIndex', () => {
+    const clearedState = farmReducer(INITIAL_STATE, { type: ACTION_TYPES.CLEAR_CANVAS });
+    expect(clearedState.items).toHaveLength(0);
+
+    const reloadedState = farmReducer(clearedState, {
+      type: ACTION_TYPES.LOAD_PRESET_FARM,
+    });
+    expect(reloadedState.items.length).toBeGreaterThan(10);
+    expect(reloadedState.selectedId).toBeNull();
+  });
 });

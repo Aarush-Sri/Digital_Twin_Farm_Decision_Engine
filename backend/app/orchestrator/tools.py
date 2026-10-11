@@ -107,6 +107,36 @@ TOOL_DEFINITIONS: List[ToolDefinition] = [
             "required": ["days"],
         },
     ),
+    ToolDefinition(
+        name="inspect_farm_profile",
+        description="Inspects the universal farm plot profile including farm name, geographic location, latitude, baseline temperature, soil texture, pH, and water source.",
+        parameters={
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    ),
+    ToolDefinition(
+        name="update_farm_profile",
+        description="Updates universal plot parameters such as location name, latitude, base temperature, soil texture (loam/sandy/clay/silt), baseline pH, or water source.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "farm_name": {"type": "string", "description": "Farm display name"},
+                "location_name": {"type": "string", "description": "Location description (e.g. Salinas Valley)"},
+                "latitude_deg": {"type": "number", "description": "Latitude in degrees (-60 to 60)"},
+                "base_temp_c": {"type": "number", "description": "Annual baseline temperature in °C"},
+                "soil_texture": {
+                    "type": "string",
+                    "enum": ["loam", "sandy", "clay", "silt"],
+                    "description": "Dominant soil texture",
+                },
+                "baseline_ph": {"type": "number", "description": "Baseline soil pH (4.0 to 9.0)"},
+                "water_source": {"type": "string", "description": "Water source description"},
+            },
+            "required": [],
+        },
+    ),
 ]
 
 
@@ -224,6 +254,13 @@ class ToolExecutor:
                     "new_day": self.engine.world.current_day,
                     "latest_log": logs[-1].model_dump() if logs else {},
                 }
+
+            elif name == "inspect_farm_profile":
+                return self.engine.world.profile.model_dump()
+
+            elif name == "update_farm_profile":
+                updated = self.engine.update_profile(args)
+                return {"status": "success", "profile": updated.model_dump()}
 
             else:
                 return {"error": f"Unknown tool: {name}"}

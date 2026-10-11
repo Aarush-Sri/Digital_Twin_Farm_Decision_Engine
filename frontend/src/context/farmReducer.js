@@ -1,12 +1,30 @@
 import { calculateZIndex, getItemDefinition } from '../types/farm';
+import { DEFAULT_PRESET_FARM, PRESET_FARMS } from '../types/presetFarm';
+
+export const getInitialFarmItems = () => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const saved = localStorage.getItem('greentwin_farm_items') || localStorage.getItem('digifarm_items');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load saved farm items from localStorage:', e);
+    }
+  }
+  return DEFAULT_PRESET_FARM;
+};
 
 export const INITIAL_STATE = {
-  // Canvas State
+  // Canvas State: Empty default canvas for tests / fresh reset
   items: [],
   selectedId: null,
   snapToGrid: true,
   nextZIndex: 1,
-  zoom: 1.0, // 0.5 to 2.0 (50% to 200%)
+  zoom: 1.0, // 0.4 to 2.5 (40% to 250%)
 
   // History stack for Undo / Redo
   past: [],
@@ -50,6 +68,42 @@ export const INITIAL_STATE = {
     total_tiles: 100,
     recent_history: [],
   },
+  farmProfile: {
+    // 1. Location & Topography
+    farm_name: 'GreenTwin Model Farm',
+    location_name: 'Salinas Valley, CA',
+    country: 'United States',
+    latitude_deg: 36.5,
+    longitude_deg: -121.65,
+    elevation_m: 25.0,
+    slope_pct: 1.5,
+
+    // 2. Climate & Atmosphere
+    base_temp_c: 22.0,
+    diurnal_range_c: 12.0,
+    annual_rainfall_mm: 550.0,
+    mean_wind_speed_ms: 2.5,
+
+    // 3. Soil & Subsurface Chemistry
+    soil_texture: 'loam',
+    organic_matter_pct: 3.2,
+    baseline_ph: 6.5,
+    baseline_nitrogen_ppm: 140.0,
+    baseline_phosphorus_ppm: 45.0,
+    baseline_potassium_ppm: 160.0,
+    soil_salinity_ec_ds_m: 0.8,
+
+    // 4. Water Infrastructure
+    water_source: 'Groundwater Well',
+    storage_capacity_m3: 500.0,
+    current_reserve_m3: 420.0,
+    water_cost_per_m3: 0.85,
+
+    // 5. Operations
+    farming_system: 'regenerative',
+    organic_certified: true,
+    currency_symbol: '$',
+  },
   tiles: [],
   simulationLogs: [],
 };
@@ -68,6 +122,7 @@ export const ACTION_TYPES = {
   TOGGLE_SNAP: 'TOGGLE_SNAP',
   BRING_TO_FRONT: 'BRING_TO_FRONT',
   LOAD_SAVED_ITEMS: 'LOAD_SAVED_ITEMS',
+  LOAD_PRESET_FARM: 'LOAD_PRESET_FARM',
 
   // History Actions
   UNDO: 'UNDO',
@@ -80,6 +135,7 @@ export const ACTION_TYPES = {
   // Backend & Simulation Actions
   SET_BACKEND_STATUS: 'SET_BACKEND_STATUS',
   SET_FARM_DATA: 'SET_FARM_DATA',
+  SET_FARM_PROFILE: 'SET_FARM_PROFILE',
   SET_SYNCING: 'SET_SYNCING',
   STEP_SIMULATION_SUCCESS: 'STEP_SIMULATION_SUCCESS',
   UPDATE_ENVIRONMENT: 'UPDATE_ENVIRONMENT',
@@ -329,6 +385,16 @@ export const farmReducer = (state, action) => {
       };
     }
 
+    case ACTION_TYPES.LOAD_PRESET_FARM: {
+      const presetItems = action.payload?.items || DEFAULT_PRESET_FARM;
+      return {
+        ...state,
+        items: presetItems,
+        selectedId: null,
+        nextZIndex: presetItems.length + 1,
+      };
+    }
+
     case ACTION_TYPES.TOGGLE_SNAP: {
       return {
         ...state,
@@ -367,6 +433,7 @@ export const farmReducer = (state, action) => {
         ...state,
         farmId: farmId || state.farmId,
         farmName: farmName || (world?.name || state.farmName),
+        farmProfile: world?.profile ? { ...state.farmProfile, ...world.profile } : state.farmProfile,
         currentDay: world?.current_day ?? state.currentDay,
         environment: world?.environment || state.environment,
         tiles: world?.tiles || state.tiles,
@@ -374,6 +441,20 @@ export const farmReducer = (state, action) => {
         farmSummary: summary || state.farmSummary,
         backendStatus: 'connected',
         backendError: null,
+      };
+    }
+
+    case ACTION_TYPES.SET_FARM_PROFILE: {
+      const { profile, summary, environment } = action.payload;
+      return {
+        ...state,
+        farmProfile: {
+          ...state.farmProfile,
+          ...profile,
+        },
+        farmName: profile?.farm_name || state.farmName,
+        farmSummary: summary || state.farmSummary,
+        environment: environment || state.environment,
       };
     }
 

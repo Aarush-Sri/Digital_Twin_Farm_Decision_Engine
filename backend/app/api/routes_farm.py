@@ -2,9 +2,46 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from ..storage.session_store import session_store
-from ..simulation.models import FarmWorld, CropType, IrrigationType, FarmTile
+from ..simulation.models import FarmWorld, CropType, IrrigationType, FarmTile, FarmProfile, SoilTexture
 
 router = APIRouter(prefix="/api/v1/farm", tags=["Farm Management"])
+
+
+class UpdateProfileRequest(BaseModel):
+    # Location & Topography
+    farm_name: Optional[str] = None
+    location_name: Optional[str] = None
+    country: Optional[str] = None
+    latitude_deg: Optional[float] = Field(default=None, ge=-60.0, le=60.0)
+    longitude_deg: Optional[float] = Field(default=None, ge=-180.0, le=180.0)
+    elevation_m: Optional[float] = Field(default=None, ge=-50.0, le=4500.0)
+    slope_pct: Optional[float] = Field(default=None, ge=0.0, le=35.0)
+
+    # Climate & Atmosphere
+    base_temp_c: Optional[float] = Field(default=None, ge=-10.0, le=45.0)
+    diurnal_range_c: Optional[float] = Field(default=None, ge=2.0, le=25.0)
+    annual_rainfall_mm: Optional[float] = Field(default=None, ge=0.0, le=3000.0)
+    mean_wind_speed_ms: Optional[float] = Field(default=None, ge=0.0, le=20.0)
+
+    # Soil Chemistry & Texture
+    soil_texture: Optional[SoilTexture] = None
+    organic_matter_pct: Optional[float] = Field(default=None, ge=0.2, le=20.0)
+    baseline_ph: Optional[float] = Field(default=None, ge=4.0, le=9.0)
+    baseline_nitrogen_ppm: Optional[float] = Field(default=None, ge=0.0)
+    baseline_phosphorus_ppm: Optional[float] = Field(default=None, ge=0.0)
+    baseline_potassium_ppm: Optional[float] = Field(default=None, ge=0.0)
+    soil_salinity_ec_ds_m: Optional[float] = Field(default=None, ge=0.0, le=12.0)
+
+    # Water Infrastructure
+    water_source: Optional[str] = None
+    storage_capacity_m3: Optional[float] = Field(default=None, ge=0.0)
+    current_reserve_m3: Optional[float] = Field(default=None, ge=0.0)
+    water_cost_per_m3: Optional[float] = Field(default=None, ge=0.0)
+
+    # Farm Operations
+    farming_system: Optional[str] = None
+    organic_certified: Optional[bool] = None
+    currency_symbol: Optional[str] = None
 
 
 class CreateFarmRequest(BaseModel):
@@ -84,6 +121,31 @@ def get_farm_summary(farm_id: str):
     if not engine:
         raise HTTPException(status_code=404, detail="Farm not found")
     return engine.get_summary()
+
+
+@router.get("/{farm_id}/profile", response_model=FarmProfile)
+def get_farm_profile(farm_id: str):
+    """Retrieves the universal plot profile for the given farm."""
+    engine = session_store.get_engine(farm_id)
+    if not engine:
+        raise HTTPException(status_code=404, detail="Farm not found")
+    return engine.world.profile
+
+
+@router.put("/{farm_id}/profile", response_model=Dict[str, Any])
+def update_farm_profile(farm_id: str, req: UpdateProfileRequest):
+    """Updates universal farm plot parameters (location, climate, soil texture, water source)."""
+    engine = session_store.get_engine(farm_id)
+    if not engine:
+        raise HTTPException(status_code=404, detail="Farm not found")
+
+    updated = engine.update_profile(req.model_dump(exclude_unset=True, exclude_none=True))
+    return {
+        "status": "updated",
+        "farm_id": farm_id,
+        "profile": updated.model_dump(),
+        "summary": engine.get_summary(),
+    }
 
 
 @router.post("/{farm_id}/tile/update", response_model=Dict[str, Any])

@@ -8,18 +8,22 @@ import {
   Sun,
   Droplets,
   Scale,
+  Settings,
+  LayoutTemplate,
   MapPin,
   ChevronRight,
   Info
 } from 'lucide-react';
 import { WeatherModal } from './WeatherModal';
 
-export const Header = ({ onOpenAgentChat }) => {
+export const Header = ({ onOpenAgentChat, onOpenProfile }) => {
   const { 
     snapToGrid, 
     toggleSnap, 
     clearCanvas, 
+    loadPresetFarm,
     items,
+    farmProfile,
     currentDay,
     environment,
     farmSettings,
@@ -68,13 +72,14 @@ export const Header = ({ onOpenAgentChat }) => {
             <div className="flex items-center space-x-2">
               <h1 className="text-base font-extrabold text-amber-200 tracking-wide font-sans drop-shadow-sm flex items-center space-x-2">
                 <span>DigiFarm</span>
+                <span className="text-xs font-mono font-bold text-amber-400">GreenTwin</span>
                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-700/60 shadow-sm">
                   Farm Canvas
                 </span>
               </h1>
             </div>
             <p className="text-[11px] text-stone-400 font-medium truncate max-w-[200px] sm:max-w-none">
-              {farmSettings?.name || 'AgriTwin'} • {farmSettings?.location || 'Zone 6b'}
+              {farmSettings?.name || farmProfile?.farm_name || 'AgriTwin'} • {farmSettings?.location || farmProfile?.location_name || 'Zone 6b'}
             </p>
           </div>
         </div>
@@ -85,7 +90,7 @@ export const Header = ({ onOpenAgentChat }) => {
           <button
             type="button"
             onClick={() => setShowWeatherModal(true)}
-            className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-stone-950/80 border border-amber-900/60 shadow-inner hover:border-amber-500 hover:bg-stone-900/90 transition-all text-left group"
+            className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-stone-950/80 border border-amber-900/60 shadow-inner hover:border-amber-500 hover:bg-stone-900/90 transition-all text-left group"
             title="Inspect 14-day climate forecast & solar radiation details"
           >
             <Sun className="w-4 h-4 text-amber-400 group-hover:rotate-45 transition-transform" />
@@ -102,7 +107,7 @@ export const Header = ({ onOpenAgentChat }) => {
           </button>
 
           {/* 2. Irrigation Method & Water Availability */}
-          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-stone-950/80 border border-sky-900/60 shadow-inner">
+          <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-stone-950/80 border border-sky-900/60 shadow-inner">
             <Droplets className={`w-4 h-4 ${waterCount > 0 ? 'text-sky-400' : 'text-amber-500'}`} />
             <div>
               <div className="flex items-center space-x-1 text-stone-300">
@@ -117,8 +122,8 @@ export const Header = ({ onOpenAgentChat }) => {
             </div>
           </div>
 
-          {/* 3. Projected Harvest Yield (Shows "Not calculated" until crops placed) */}
-          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-stone-950/80 border border-emerald-900/60 shadow-inner">
+          {/* 3. Projected Harvest Yield */}
+          <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-stone-950/80 border border-emerald-900/60 shadow-inner">
             <Scale className="w-4 h-4 text-emerald-400" />
             <div>
               <div className="flex items-center space-x-1 text-stone-300">
@@ -133,8 +138,8 @@ export const Header = ({ onOpenAgentChat }) => {
             </div>
           </div>
 
-          {/* 4. Farm Area & Placed Items Summary (Secondary counter) */}
-          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-stone-950/80 border border-stone-800 shadow-inner">
+          {/* 4. Farm Area & Placed Items Summary */}
+          <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-stone-950/80 border border-stone-800 shadow-inner">
             <div>
               <div className="text-amber-200 font-mono font-bold text-[11px]">
                 {farmStats?.totalCultivatedAcres || 0} / {farmSettings?.totalSize || 2.5} {farmSettings?.unit || 'Acres'}
@@ -146,9 +151,23 @@ export const Header = ({ onOpenAgentChat }) => {
           </div>
         </div>
 
-        {/* Right Action Controls: AI Agronomist + Editing Tools */}
-        <div className="flex items-center space-x-3.5 flex-shrink-0">
-          {/* Ask AI Agent Drawer Button (With scenario-ready state indicator) */}
+        {/* Right Action Controls: Farm Profile, AI Agronomist, Snap, Preset, Clear */}
+        <div className="flex items-center space-x-3 flex-shrink-0">
+          {/* Farm Profile Button */}
+          {onOpenProfile && (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-stone-900 text-stone-300 border border-amber-900/60 hover:border-amber-700/80 hover:bg-stone-800 transition-all shadow-sm"
+              title="Edit Farm Location, Soil & Climate Profile"
+            >
+              <Settings className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden md:inline">{farmProfile?.location_name || 'Farm Profile'}</span>
+              <span className="md:hidden">Profile</span>
+            </button>
+          )}
+
+          {/* Ask AI Agent Drawer Button */}
           <button
             type="button"
             onClick={onOpenAgentChat}
@@ -172,7 +191,7 @@ export const Header = ({ onOpenAgentChat }) => {
           <button
             type="button"
             onClick={toggleSnap}
-            className={`hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-mono transition-all border ${
+            className={`hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-mono transition-all border ${
               snapToGrid
                 ? 'bg-emerald-950/80 text-emerald-300 border-emerald-600/70 shadow-sm'
                 : 'bg-stone-900 text-stone-400 border-stone-800 hover:text-stone-200'
@@ -183,12 +202,29 @@ export const Header = ({ onOpenAgentChat }) => {
             <span>Snap {snapToGrid ? 'ON' : 'OFF'}</span>
           </button>
 
+          {/* Preset Farm Button */}
+          {loadPresetFarm && (
+            <button
+              type="button"
+              onClick={() => {
+                if (items.length === 0 || window.confirm('Load the pre-designed GreenTwin farm layout? (This replaces current canvas items)')) {
+                  loadPresetFarm('model');
+                }
+              }}
+              className="hidden lg:flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-700/70 hover:bg-emerald-900/90 hover:text-emerald-200 transition-all shadow-sm"
+              title="Load pre-designed farm layout with crops, barn, canal & well"
+            >
+              <LayoutTemplate className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Preset Farm</span>
+            </button>
+          )}
+
           {/* Clear Canvas */}
           <button
             type="button"
             onClick={handleClear}
             disabled={items.length === 0}
-            className={`hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs transition-all border ${
+            className={`hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs transition-all border ${
               items.length > 0
                 ? 'bg-stone-900 text-stone-300 border-stone-800 hover:bg-red-950/50 hover:text-red-300 hover:border-red-700/60'
                 : 'bg-stone-900/40 text-stone-600 border-stone-900 cursor-not-allowed'

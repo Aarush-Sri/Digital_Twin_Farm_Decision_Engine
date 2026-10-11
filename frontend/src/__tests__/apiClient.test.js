@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { apiClient } from '../api/apiClient';
 
-describe('DigiFarm API Client', () => {
+describe('GreenTwin API Client', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -98,5 +98,77 @@ describe('DigiFarm API Client', () => {
 
     expect(result.final_response).toBe('Irrigation optimized.');
     expect(result.actions_taken).toHaveLength(1);
+  });
+
+  it('fetches agent status and sends provider options in agent chat', async () => {
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          gemini: { configured: true, default_model: 'gemini-2.5-flash' },
+          ollama: { reachable: true, default_model: 'qwen3.5' },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          final_response: 'Qwen analysis completed.',
+          actions_taken: [],
+          execution_steps: [],
+          provider_used: 'ollama',
+          model_used: 'qwen3.5',
+        }),
+      });
+
+    const status = await apiClient.getAgentStatus();
+    expect(status.ollama.default_model).toBe('qwen3.5');
+
+    const chatRes = await apiClient.sendAgentChat('farm-123', {
+      prompt: 'Check crop vitals',
+      geminiApiKey: 'AIzaSy123',
+      model: 'qwen3.5',
+      preferredProvider: 'ollama',
+    });
+    expect(chatRes.provider_used).toBe('ollama');
+    expect(global.fetch).toHaveBeenLastCalledWith(
+      expect.stringContaining('/api/v1/agent/farm-123/chat'),
+      expect.objectContaining({
+        body: expect.stringContaining('"preferred_provider":"ollama"'),
+      })
+    );
+  });
+
+  it('fetches and updates farm profile', async () => {
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          farm_name: 'Green Acres',
+          latitude_deg: 36.5,
+          soil_texture: 'loam',
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: 'updated',
+          profile: {
+            farm_name: 'Sunny Ridge',
+            latitude_deg: 42.0,
+            soil_texture: 'sandy',
+          },
+        }),
+      });
+
+    const profile = await apiClient.getFarmProfile('farm-123');
+    expect(profile.soil_texture).toBe('loam');
+
+    const updateRes = await apiClient.updateFarmProfile('farm-123', {
+      farm_name: 'Sunny Ridge',
+      latitude_deg: 42.0,
+      soil_texture: 'sandy',
+    });
+    expect(updateRes.status).toBe('updated');
+    expect(updateRes.profile.soil_texture).toBe('sandy');
   });
 });
