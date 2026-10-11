@@ -161,7 +161,7 @@ export const apiClient = {
     return request('/api/v1/agent/status');
   },
 
-  async sendAgentChat(farmId, { prompt, chatHistory = [], maxSteps = 5, geminiApiKey = null, model = null, preferredProvider = 'auto' }) {
+  async sendAgentChat(farmId, { prompt, chatHistory = [], maxSteps = 5, geminiApiKey = null, model = null, preferredProvider = 'auto', frontendFarmContext = null }) {
     return request(`/api/v1/agent/${encodeURIComponent(farmId)}/chat`, {
       method: 'POST',
       body: JSON.stringify({
@@ -171,6 +171,7 @@ export const apiClient = {
         gemini_api_key: geminiApiKey,
         model,
         preferred_provider: preferredProvider,
+        frontend_farm_context: frontendFarmContext,
       }),
     });
   },

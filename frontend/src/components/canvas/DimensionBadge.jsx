@@ -10,7 +10,14 @@ import {
   getItemDefinition 
 } from '../../types/farm';
 
-export const DimensionBadge = ({ item, onUpdateDimensions, onUpdateRotation, onDelete, onBringToFront }) => {
+export const DimensionBadge = ({
+  item,
+  onUpdateDimensions,
+  onUpdateRotation,
+  onDelete,
+  onBringToFront,
+  showDimensions = false,
+}) => {
   const itemDef = getItemDefinition(item.type);
   const isPoint = Boolean(item.isPointIcon || itemDef.isPointIcon);
   const isLine = item.type === 'fence' || item.type === 'pipe';
@@ -29,11 +36,13 @@ export const DimensionBadge = ({ item, onUpdateDimensions, onUpdateRotation, onD
     setMeterWidth(pxToMetersNum(wPx));
     setMeterHeight(pxToMetersNum(hPx));
 
-    onUpdateDimensions({
-      id: item.id,
-      width: wPx,
-      height: hPx,
-    });
+    if (onUpdateDimensions) {
+      onUpdateDimensions({
+        id: item.id,
+        width: wPx,
+        height: hPx,
+      });
+    }
   };
 
   const handleWidthChange = (e) => {
@@ -77,10 +86,10 @@ export const DimensionBadge = ({ item, onUpdateDimensions, onUpdateRotation, onD
       onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
-      className="absolute -top-16 left-1/2 -translate-x-1/2 z-[9999] flex items-center space-x-2 bg-stone-950/95 backdrop-blur-md px-3.5 py-1.5 rounded-xl border-2 border-amber-800/80 shadow-[0_8px_25px_rgba(0,0,0,0.7)] text-xs select-none pointer-events-auto"
+      className="absolute -top-12 left-1/2 -translate-x-1/2 z-[9999] flex items-center space-x-2 bg-stone-950/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-stone-800 shadow-[0_8px_25px_rgba(0,0,0,0.7)] text-xs select-none pointer-events-auto"
     >
       {/* Element Type Indicator */}
-      <span className="font-mono text-[10px] uppercase font-bold text-amber-300 bg-amber-950/90 border border-amber-700/70 px-2 py-0.5 rounded shadow-sm">
+      <span className="font-mono text-[10px] uppercase font-bold text-emerald-300 bg-emerald-950/90 border border-emerald-700/70 px-2 py-0.5 rounded shadow-sm">
         {item.type}
       </span>
 
@@ -237,7 +246,7 @@ export const DimensionBadge = ({ item, onUpdateDimensions, onUpdateRotation, onD
       )}
 
       {/* Layer Priority Tier & Actions */}
-      <div className="flex items-center space-x-1 pl-1 border-l border-amber-950">
+      <div className="flex items-center space-x-1 pl-1 border-l border-stone-800">
         <button
           type="button"
           title="Bring to front"

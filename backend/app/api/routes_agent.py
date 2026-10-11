@@ -17,6 +17,7 @@ class AgentChatRequest(BaseModel):
     gemini_api_key: Optional[str] = None
     model: Optional[str] = None
     preferred_provider: Optional[str] = "auto"  # "auto", "gemini", "ollama"
+    frontend_farm_context: Optional[Dict[str, Any]] = None  # 2D Farm canvas topology & UI state
 
 
 @router.get("/status", response_model=Dict[str, Any])
@@ -72,5 +73,6 @@ async def agent_chat(farm_id: str, req: AgentChatRequest):
         user_prompt=req.prompt,
         chat_history=req.chat_history,
         max_steps=req.max_steps,
+        frontend_farm_context=req.frontend_farm_context,
     )
     return response

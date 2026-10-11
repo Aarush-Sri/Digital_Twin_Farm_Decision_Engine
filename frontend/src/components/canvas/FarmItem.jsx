@@ -192,9 +192,9 @@ export const FarmItem = ({
           </div>
         )}
 
-        {/* Content Badge / Scale Dimension Label */}
+        {/* Content Badge */}
         {!isSlim && !isFrameless && (
-          <div className="relative z-20 flex flex-col items-center justify-center text-center p-1 space-y-0.5 pointer-events-none">
+          <div className="relative z-20 flex flex-col items-center justify-center text-center p-1 pointer-events-none">
             <div 
               className="px-1.5 py-0.5 rounded shadow-md backdrop-blur-md flex items-center space-x-1 border"
               style={{ 
@@ -208,26 +208,6 @@ export const FarmItem = ({
                 {itemDef.label}
               </span>
             </div>
-            
-            <span className="text-[8px] font-mono font-semibold text-zinc-300 drop-shadow px-1 rounded bg-black/60">
-              {pxToMeters(item.width)} × {pxToMeters(item.height)}
-            </span>
-          </div>
-        )}
-
-        {/* Frameless scale indicator pill */}
-        {isFrameless && item.type !== 'fence' && (
-          <div className="absolute bottom-0 z-20 pointer-events-none px-1 rounded bg-black/65 border border-amber-500/50 text-[8px] font-mono font-bold text-amber-200">
-            {pxToMeters(item.width)} × {pxToMeters(item.height)}
-          </div>
-        )}
-
-        {/* Slim view for fences */}
-        {item.type === 'fence' && (
-          <div className="absolute bottom-0 z-20 flex items-center justify-center w-full px-1 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-            <span className="text-[8px] font-mono font-bold text-amber-100 drop-shadow px-1.5 py-0.2 rounded bg-black/75 border border-amber-800/60 truncate">
-              Fence ({pxToMeters(item.width)})
-            </span>
           </div>
         )}
       </div>
