@@ -16,6 +16,7 @@ export const FarmCanvas = () => {
     addItem,
     updatePosition,
     updateDimensions,
+    updateRotation,
     selectItem,
     deselectAll,
     deleteItem,
@@ -231,13 +232,7 @@ export const FarmCanvas = () => {
   const baseCanvasHeight = Math.max(2600, boundaryHeightPx + 600);
 
   return (
-    <main
-      ref={canvasRef}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-      onClick={handleCanvasClick}
-      className="relative flex-1 min-h-0 min-w-0 w-full h-full farm-canvas-grid farm-canvas-grid-fine overflow-auto select-none"
-    >
+    <div className="relative flex-1 min-h-0 min-w-0 w-full h-full overflow-hidden select-none">
       {/* Editor Compact Action Toolbar (Undo, Redo, Duplicate, Delete, Zoom, Snap, Clear, Dimensions) */}
       <EditorToolbar onOpenFarmSettings={() => setShowBoundaryModal(true)} />
 
@@ -249,6 +244,14 @@ export const FarmCanvas = () => {
         isOpen={showBoundaryModal}
         onClose={() => setShowBoundaryModal(false)}
       />
+
+      <main
+        ref={canvasRef}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onClick={handleCanvasClick}
+        className="relative w-full h-full farm-canvas-grid farm-canvas-grid-fine overflow-auto select-none"
+      >
 
       {/* Exact-scale container so scrollbars dynamically reflect both horizontal and vertical virtual dimensions */}
       <div
@@ -378,6 +381,7 @@ export const FarmCanvas = () => {
               onSelect={selectItem}
               onUpdatePosition={updatePosition}
               onUpdateDimensions={updateDimensions}
+              onUpdateRotation={updateRotation}
               onDelete={deleteItem}
               onBringToFront={bringToFront}
             />

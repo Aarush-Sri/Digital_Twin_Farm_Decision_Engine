@@ -560,15 +560,15 @@ export const FARM_ITEMS = [
     type: ITEM_TYPES.BARN,
     label: 'Timber Barn',
     category: 'Structures',
-    description: 'Classic red timber barn & grain storage silo',
+    description: 'Classic red timber barn & grain storage silo (4m × 4m)',
     iconName: 'Warehouse',
     image: '/assets/building_barn.png',
     layerPriority: ITEM_LAYER_PRIORITY[ITEM_TYPES.BARN],
     isPointIcon: true,
-    defaultWidth: 120,
-    defaultHeight: 120,
-    minWidth: 120,
-    minHeight: 120,
+    defaultWidth: 160,
+    defaultHeight: 160,
+    minWidth: 160,
+    minHeight: 160,
     color: {
       bg: 'transparent',
       border: '#dc2626',
@@ -581,15 +581,15 @@ export const FARM_ITEMS = [
     type: ITEM_TYPES.SHED,
     label: 'Farmhouse / Shed',
     category: 'Structures',
-    description: 'Field equipment workshop & tool shed (2m × 2m)',
+    description: 'Field equipment workshop & farmhouse hut (4m × 4m)',
     iconName: 'Warehouse',
     image: '/assets/building_barn.png',
     layerPriority: ITEM_LAYER_PRIORITY[ITEM_TYPES.SHED],
     isPointIcon: true,
-    defaultWidth: 80,
-    defaultHeight: 80,
-    minWidth: 80,
-    minHeight: 80,
+    defaultWidth: 160,
+    defaultHeight: 160,
+    minWidth: 160,
+    minHeight: 160,
     color: {
       bg: '#1c1917',
       border: '#78716c',
@@ -648,15 +648,15 @@ export const FARM_ITEMS = [
     type: ITEM_TYPES.WELL,
     label: 'Stone Well',
     category: 'Irrigation',
-    description: 'Groundwater well with hand-pump (2m × 2m)',
+    description: 'Groundwater well with hand-pump (3m × 3m)',
     iconName: 'Waves',
     image: '/assets/decor_well.png',
     layerPriority: ITEM_LAYER_PRIORITY[ITEM_TYPES.WELL],
     isPointIcon: true,
-    defaultWidth: 80,
-    defaultHeight: 80,
-    minWidth: 80,
-    minHeight: 80,
+    defaultWidth: 120,
+    defaultHeight: 120,
+    minWidth: 120,
+    minHeight: 120,
     color: {
       bg: 'transparent',
       border: '#0284c7',
@@ -711,3 +711,13 @@ export const FARM_ITEMS = [
 export const getItemDefinition = (type) => {
   return FARM_ITEMS.find((item) => item.type === type) || FARM_ITEMS[0];
 };
+
+export const isFixedSizeItem = (type) => {
+  const def = getItemDefinition(type);
+  return Boolean(def.isPointIcon);
+};
+
+export const isLineItem = (type) => {
+  return type === 'fence' || type === 'pipe';
+};
+

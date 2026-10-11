@@ -39,6 +39,10 @@ export const FarmProvider = ({ children }) => {
     }
   }, []);
 
+  const updateRotation = useCallback((id, rotation) => {
+    dispatch({ type: ACTION_TYPES.UPDATE_ROTATION, payload: { id, rotation } });
+  }, []);
+
   const selectItem = useCallback((id) => {
     dispatch({ type: ACTION_TYPES.SELECT_ITEM, payload: { id } });
   }, []);
@@ -963,6 +967,7 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     addItem,
     updatePosition,
     updateDimensions,
+    updateRotation,
     selectItem,
     deselectAll,
     deleteItem,
@@ -994,6 +999,7 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     addItem,
     updatePosition,
     updateDimensions,
+    updateRotation,
     selectItem,
     deselectAll,
     deleteItem,

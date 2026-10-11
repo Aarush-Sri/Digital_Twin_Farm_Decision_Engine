@@ -98,12 +98,14 @@ async def test_gemini_provider_mock_generation():
     mock_client.models.generate_content.return_value = mock_response
     provider._client = mock_client
 
-    messages = [LLMMessage(role="user", content="How is the soil?")]
-    res = await provider.generate_response(messages)
+    import sys
+    with patch.dict(sys.modules, {"google": MagicMock(), "google.genai": MagicMock()}):
+        messages = [LLMMessage(role="user", content="How is the soil?")]
+        res = await provider.generate_response(messages)
 
-    assert res.provider == "gemini"
-    assert "optimal" in res.content
-    assert res.model == "gemini-2.5-flash"
+        assert res.provider == "gemini"
+        assert "optimal" in res.content
+        assert res.model == "gemini-2.5-flash"
 
 
 @pytest.mark.asyncio

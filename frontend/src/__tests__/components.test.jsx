@@ -74,6 +74,28 @@ describe('Farm UI Components', () => {
     expect(screen.getByText(/Objects: 22/)).toBeInTheDocument();
   });
 
+  it('renders EditorToolbar static in the middle top outside the scrolling canvas', () => {
+    const { container } = render(
+      <FarmProvider>
+        <FarmCanvas />
+      </FarmProvider>
+    );
+
+    const canvasMain = container.querySelector('main');
+    expect(canvasMain).toBeInTheDocument();
+
+    const zoomResetBtn = screen.getByTitle('Reset Zoom to 100%');
+    const toolbar = zoomResetBtn.closest('[class*="z-30"]');
+    expect(toolbar).toBeInTheDocument();
+
+    // Must be outside the scrolling main container so wheel scrolling doesn't move it
+    expect(canvasMain).not.toContainElement(toolbar);
+
+    // Must be centered in the middle top
+    expect(toolbar.className).toMatch(/left-1\/2/);
+    expect(toolbar.className).toMatch(/-translate-x-1\/2/);
+  });
+
   it('renders WhatIfModal when open and shows scenario presets', () => {
     render(
       <FarmProvider>

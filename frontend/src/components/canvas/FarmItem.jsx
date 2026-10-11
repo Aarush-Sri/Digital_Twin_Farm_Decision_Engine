@@ -14,7 +14,8 @@ import {
   Cherry,
   CircleDot,
   Warehouse,
-  Footprints
+  Footprints,
+  RotateCw
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -37,6 +38,7 @@ export const FarmItem = ({
   onSelect,
   onUpdatePosition,
   onUpdateDimensions,
+  onUpdateRotation,
   onDelete,
   onBringToFront,
 }) => {
@@ -102,6 +104,7 @@ export const FarmItem = ({
   };
 
   const isPoint = Boolean(item.isPointIcon || itemDef.isPointIcon);
+  const isLine = item.type === 'fence' || item.type === 'pipe';
   const isSlim = item.height < 32 || item.width < 32;
   const isCompact = item.height < 60 || item.width < 60;
 
@@ -110,7 +113,7 @@ export const FarmItem = ({
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
+      animate={{ scale: 1, opacity: 1, rotate: item.rotation || 0 }}
       exit={{ scale: 0.6, opacity: 0 }}
       whileHover={{ scale: isResizing ? 1 : 1.01 }}
       transition={{ type: 'spring', stiffness: 380, damping: 25 }}
@@ -238,9 +241,24 @@ export const FarmItem = ({
               onStartResize={startResize}
             />
           )}
+          {isLine && onUpdateRotation && (
+            <button
+              type="button"
+              title="Rotate 90°"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdateRotation(item.id, ((item.rotation || 0) + 90) % 360);
+              }}
+              className="absolute -top-3.5 -right-3.5 z-50 p-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 rounded-full shadow-xl border-2 border-stone-950 hover:scale-110 active:scale-95 transition-all cursor-pointer"
+            >
+              <RotateCw className="w-3.5 h-3.5 stroke-[2.5]" />
+            </button>
+          )}
           <DimensionBadge
             item={item}
             onUpdateDimensions={onUpdateDimensions}
+            onUpdateRotation={onUpdateRotation}
             onDelete={onDelete}
             onBringToFront={onBringToFront}
           />
