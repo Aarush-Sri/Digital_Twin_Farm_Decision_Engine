@@ -258,16 +258,35 @@ export const FarmProvider = ({ children }) => {
    */
   const generateLocalAnalysis = (prompt) => {
     const p = (prompt || '').toLowerCase();
-    const crops = state.items.filter((i) => i.type === ITEM_TYPES.WHEAT || i.type === ITEM_TYPES.CARROT);
+    const crops = state.items.filter((i) => 
+      i.type === ITEM_TYPES.WHEAT || 
+      i.type === ITEM_TYPES.CARROT || 
+      i.type === ITEM_TYPES.TOMATO || 
+      i.type === ITEM_TYPES.CORN || 
+      i.type === ITEM_TYPES.PUMPKIN || 
+      i.type === ITEM_TYPES.STRAWBERRY
+    );
     const wheatCount = state.items.filter((i) => i.type === ITEM_TYPES.WHEAT).length;
     const carrotCount = state.items.filter((i) => i.type === ITEM_TYPES.CARROT).length;
-    const waterCount = state.items.filter((i) => i.type === ITEM_TYPES.WATER).length;
+    const tomatoCount = state.items.filter((i) => i.type === ITEM_TYPES.TOMATO).length;
+    const cornCount = state.items.filter((i) => i.type === ITEM_TYPES.CORN).length;
+    const pumpkinCount = state.items.filter((i) => i.type === ITEM_TYPES.PUMPKIN).length;
+    const strawberryCount = state.items.filter((i) => i.type === ITEM_TYPES.STRAWBERRY).length;
+    const waterCount = state.items.filter((i) => i.type === ITEM_TYPES.WATER || i.type === ITEM_TYPES.WELL).length;
     const treeCount = state.items.filter((i) => i.type === ITEM_TYPES.TREE).length;
     const grassCount = state.items.filter((i) => i.type === ITEM_TYPES.GRASS).length;
     const fenceCount = state.items.filter((i) => i.type === ITEM_TYPES.FENCE).length;
     const totalItems = state.items.length;
 
-    const estYieldKg = (wheatCount * 4.5 * 2.2) + (carrotCount * 3.8 * 2.2) + (treeCount * 12.0);
+    const estYieldKg = (
+      wheatCount * 9.9 + 
+      carrotCount * 8.4 + 
+      tomatoCount * 11.2 + 
+      cornCount * 14.5 + 
+      pumpkinCount * 22.0 + 
+      strawberryCount * 6.5 + 
+      treeCount * 12.0
+    );
 
     let content = '';
     let actionType = 'agronomic_consultation';

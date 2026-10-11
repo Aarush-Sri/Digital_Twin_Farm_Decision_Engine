@@ -6,6 +6,10 @@ import {
   Fence as FenceIcon, 
   Wheat as WheatIcon, 
   Carrot as CarrotIcon,
+  Cherry,
+  CircleDot,
+  Warehouse,
+  Footprints,
   GripVertical,
   Plus
 } from 'lucide-react';
@@ -19,6 +23,10 @@ const ICON_MAP = {
   Fence: FenceIcon,
   Wheat: WheatIcon,
   Carrot: CarrotIcon,
+  Cherry,
+  CircleDot,
+  Warehouse,
+  Footprints,
 };
 
 export const PaletteCard = ({ itemDef, onQuickAdd }) => {
@@ -39,52 +47,61 @@ export const PaletteCard = ({ itemDef, onQuickAdd }) => {
     <div
       draggable
       onDragStart={handleDragStart}
-      className="group relative flex flex-col p-3 rounded-xl border border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800/80 hover:border-zinc-700 transition-all duration-150 cursor-grab active:cursor-grabbing shadow-sm select-none"
+      className="group relative flex items-center p-2.5 rounded-xl border border-amber-950/60 bg-gradient-to-b from-stone-900/90 to-stone-950/95 hover:border-amber-600/80 hover:from-stone-900 hover:to-amber-950/30 transition-all duration-200 cursor-grab active:cursor-grabbing shadow-md hover:shadow-amber-950/30 select-none"
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center space-x-2.5">
-          <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center border shadow-inner transition-transform group-hover:scale-105 duration-150"
-            style={{ 
-              backgroundColor: itemDef.color.bg, 
-              borderColor: itemDef.color.border,
-              color: itemDef.color.accent 
+      {/* Thumbnail Box */}
+      <div 
+        className="w-12 h-12 rounded-lg flex items-center justify-center border overflow-hidden relative mr-3 flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform duration-200"
+        style={{ 
+          backgroundColor: itemDef.color.bg, 
+          borderColor: itemDef.color.border 
+        }}
+      >
+        {itemDef.image ? (
+          <img 
+            src={itemDef.image} 
+            alt={itemDef.label} 
+            className="w-full h-full object-cover pixel-crisp"
+            style={{
+              objectFit: itemDef.type === 'tree' || itemDef.type === 'fence' ? 'contain' : 'cover'
             }}
-          >
-            <IconComponent className="w-4 h-4" />
-          </div>
-          <div>
-            <h4 className="text-xs font-semibold text-zinc-200 group-hover:text-white tracking-wide">
-              {itemDef.label}
-            </h4>
-            <span className="text-[10px] text-zinc-500 uppercase font-mono tracking-wider">
-              {itemDef.category}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center space-x-1">
-          <button
-            type="button"
-            title="Click to spawn on canvas"
-            onClick={() => onQuickAdd(itemDef)}
-            className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-700/60 transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-          <GripVertical className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+          />
+        ) : (
+          <IconComponent className="w-5 h-5 text-amber-200" />
+        )}
+
+        {/* Mini category badge */}
+        <div className="absolute bottom-0 inset-x-0 bg-black/70 text-[8px] font-mono text-center text-zinc-300 py-0.2">
+          {itemDef.category}
         </div>
       </div>
 
-      <p className="text-[11px] text-zinc-400 line-clamp-1 mb-2 font-sans">
-        {itemDef.description}
-      </p>
+      {/* Info Body */}
+      <div className="flex-1 min-w-0 pr-2">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-bold text-amber-100 group-hover:text-amber-300 tracking-wide truncate">
+            {itemDef.label}
+          </h4>
+          <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-800/50">
+            {pxToMeters(itemDef.defaultWidth)} × {pxToMeters(itemDef.defaultHeight)}
+          </span>
+        </div>
+        <p className="text-[11px] text-stone-400 line-clamp-1 mt-0.5 font-sans">
+          {itemDef.description}
+        </p>
+      </div>
 
-      <div className="flex items-center justify-between pt-2 border-t border-zinc-800/60 text-[10px] text-zinc-500 font-mono">
-        <span>Default {pxToMeters(itemDef.defaultWidth)} × {pxToMeters(itemDef.defaultHeight)}</span>
-        <span 
-          className="w-2 h-2 rounded-full" 
-          style={{ backgroundColor: itemDef.color.accent }}
-        />
+      {/* Actions */}
+      <div className="flex items-center space-x-1 flex-shrink-0">
+        <button
+          type="button"
+          title="Click to spawn on canvas"
+          onClick={() => onQuickAdd(itemDef)}
+          className="p-1.5 rounded-lg text-amber-300 bg-amber-950/60 hover:bg-amber-600 hover:text-stone-950 border border-amber-700/60 transition-all shadow-sm"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+        <GripVertical className="w-3.5 h-3.5 text-stone-600 group-hover:text-amber-400 transition-colors" />
       </div>
     </div>
   );

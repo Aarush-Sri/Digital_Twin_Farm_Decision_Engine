@@ -13,19 +13,52 @@
   }
 }
 
-/* Engineering Blueprint / Farm Grid pattern */
+/* Stardew Valley & Clash of Clans Farm Meadow Background */
 .farm-canvas-grid {
-  background-color: #09090b;
+  background-color: #244b15;
   background-image: 
-    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.08) 1px, transparent 0);
-  background-size: 20px 20px;
+    linear-gradient(to right, rgba(0, 0, 0, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 1px, transparent 1px),
+    url('/assets/grass_tile.png');
+  background-size: 20px 20px, 20px 20px, 240px 137px;
+  background-repeat: repeat, repeat, repeat;
+  image-rendering: pixelated;
 }
 
 .farm-canvas-grid-fine {
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 20px 20px;
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.16) 1px, transparent 0),
+    linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+    url('/assets/grass_tile.png');
+  background-size: 20px 20px, 40px 40px, 40px 40px, 240px 137px;
+  background-repeat: repeat, repeat, repeat, repeat;
+  image-rendering: pixelated;
+}
+
+/* Pixel art crisp rendering */
+.pixel-crisp {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Stardew & Clash of Clans wooden border shadow */
+.wood-panel {
+  background: linear-gradient(180deg, #382212 0%, #241409 100%);
+  border: 2px solid #6b4423;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.wood-button {
+  background: linear-gradient(180deg, #854d0e 0%, #713f12 100%);
+  border: 1px solid #ca8a04;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.wood-button:hover {
+  background: linear-gradient(180deg, #a16207 0%, #854d0e 100%);
+  border-color: #eab308;
 }
 
 /* Custom dark scrollbar */
@@ -34,12 +67,12 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: #0f172a;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #334155;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #475569;
 }
