@@ -15,8 +15,12 @@ import {
   Flame,
   Droplets,
   Sprout,
-  Scale
+  Scale,
+  Settings2,
+  Zap
 } from 'lucide-react';
+import { apiClient } from '../../api/apiClient';
+import { FormattedMessage } from './FormattedMessage';
 
 export const AgentChatDrawer = ({ isOpen, onClose }) => {
   const { sendAgentChat, backendStatus, farmName, currentDay } = useFarm();
@@ -24,7 +28,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
     {
       id: 'welcome',
       role: 'assistant',
-      content: `Hello! I am your AI Agronomist & Decision Engine. I can answer any agronomy or farming questions, inspect farm conditions, calculate solar/water stress, and evaluate what-if scenarios for **${farmName}**. What would you like to know?`,
+      content: `Hello! I am your AI Agronomist & Decision Engine. I can answer agronomy questions, inspect farm conditions, calculate solar/water stress, and evaluate what-if scenarios for **${farmName}**. What would you like to know?`,
       steps: [],
       timestamp: new Date().toLocaleTimeString(),
     },
@@ -32,21 +36,64 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
   const [inputPrompt, setInputPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState({});
-  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  
+  // AI Provider & Key Settings
   const [apiKey, setApiKey] = useState(() => {
-    return typeof window !== 'undefined' ? localStorage.getItem('DIGIFARM_GEMINI_KEY') || '' : '';
+    return typeof window !== 'undefined'
+      ? localStorage.getItem('GREENTWIN_GEMINI_KEY') || localStorage.getItem('DIGIFARM_GEMINI_KEY') || ''
+      : '';
   });
-  const [ollamaModel, setOllamaModel] = useState(null);
+  const [preferredProvider, setPreferredProvider] = useState(() => {
+    return typeof window !== 'undefined'
+      ? localStorage.getItem('GREENTWIN_AI_PROVIDER') || localStorage.getItem('DIGIFARM_AI_PROVIDER') || 'auto'
+      : 'auto';
+  });
+  const [geminiModel, setGeminiModel] = useState(() => {
+    return typeof window !== 'undefined'
+      ? localStorage.getItem('GREENTWIN_GEMINI_MODEL') || localStorage.getItem('DIGIFARM_GEMINI_MODEL') || 'gemini-2.5-flash'
+      : 'gemini-2.5-flash';
+  });
+  const [localModel, setLocalModel] = useState(() => {
+    return typeof window !== 'undefined'
+      ? localStorage.getItem('GREENTWIN_LOCAL_MODEL') || 'llama3.2:1b'
+      : 'llama3.2:1b';
+  });
+  const [installedModels, setInstalledModels] = useState(['llama3.2:1b', 'qwen3.5:latest']);
+  const [backendAgentStatus, setBackendAgentStatus] = useState(null);
+
   const messagesEndRef = useRef(null);
 
   const saveApiKey = (key) => {
     setApiKey(key);
     if (typeof window !== 'undefined') {
       if (key.trim()) {
-        localStorage.setItem('DIGIFARM_GEMINI_KEY', key.trim());
+        localStorage.setItem('GREENTWIN_GEMINI_KEY', key.trim());
       } else {
+        localStorage.removeItem('GREENTWIN_GEMINI_KEY');
         localStorage.removeItem('DIGIFARM_GEMINI_KEY');
       }
+    }
+  };
+
+  const savePreferredProvider = (prov) => {
+    setPreferredProvider(prov);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('GREENTWIN_AI_PROVIDER', prov);
+    }
+  };
+
+  const saveGeminiModel = (mod) => {
+    setGeminiModel(mod);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('GREENTWIN_GEMINI_MODEL', mod);
+    }
+  };
+
+  const saveLocalModel = (mod) => {
+    setLocalModel(mod);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('GREENTWIN_LOCAL_MODEL', mod);
     }
   };
 
@@ -59,7 +106,17 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       scrollToBottom();
-      if (!apiKey && typeof window !== 'undefined') {
+      
+      // Fetch backend agent status
+      apiClient.getAgentStatus().then((status) => {
+        setBackendAgentStatus(status);
+        if (status?.ollama?.installed_models?.length > 0) {
+          setInstalledModels(status.ollama.installed_models);
+        }
+      }).catch(() => {});
+
+      // Discover local Ollama models in browser
+      if (typeof window !== 'undefined') {
         const fetchTags = async () => {
           try {
             let res = await fetch('/ollama/api/tags').catch(() => null);
@@ -69,19 +126,18 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
             if (res && res.ok) {
               const data = await res.json();
               if (data?.models && data.models.length > 0) {
-                setOllamaModel(data.models[0].name);
-                return;
+                const names = data.models.map((m) => m.name);
+                setInstalledModels(names);
               }
             }
-            setOllamaModel(null);
           } catch {
-            setOllamaModel(null);
+            // keep default
           }
         };
         fetchTags();
       }
     }
-  }, [messages, isOpen, apiKey]);
+  }, [messages, isOpen]);
 
   const handleSend = async (customPrompt) => {
     const promptToSend = customPrompt || inputPrompt;
@@ -99,13 +155,17 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
     setInputPrompt('');
     setIsLoading(true);
 
-    // Format chat history for API
     const historyPayload = messages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    const result = await sendAgentChat(promptToSend, historyPayload);
+    const activeModel = preferredProvider === 'gemini' ? geminiModel : localModel;
+    const result = await sendAgentChat(promptToSend, historyPayload, 5, {
+      preferredProvider,
+      model: activeModel,
+      geminiApiKey: apiKey,
+    });
 
     if (result.success && result.data) {
       const resp = result.data;
@@ -143,6 +203,17 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  // Active Provider & Model Label
+  let badgeLabel = 'Twin Engine';
+  let badgeSub = 'Simulating farm plot what-if scenarios';
+  if (preferredProvider === 'gemini' || (preferredProvider === 'auto' && (apiKey || backendAgentStatus?.gemini?.configured))) {
+    badgeLabel = `Gemini (${geminiModel.replace('gemini-', '')})`;
+    badgeSub = 'Google Gemini Cloud Intelligence';
+  } else if (preferredProvider === 'ollama' || preferredProvider === 'auto') {
+    badgeLabel = localModel.includes('1b') ? 'Llama 3.2 (1B)' : localModel.includes('qwen') ? 'Qwen 3.5' : localModel;
+    badgeSub = 'Local Ollama Neural Model';
+  }
+
   return (
     <div className="fixed inset-y-0 right-0 w-full sm:w-[480px] bg-gradient-to-b from-stone-950 via-stone-900 to-stone-950 border-l-2 border-amber-800/80 shadow-[-10px_0_30px_rgba(0,0,0,0.8)] z-50 flex flex-col transition-all duration-300">
       {/* Header */}
@@ -157,30 +228,26 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
                 AI Agronomist
               </h3>
               <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-600/70 shadow-sm">
-                {apiKey ? 'Gemini Live' : ollamaModel ? `Ollama (${ollamaModel})` : 'Twin Engine'}
+                {badgeLabel}
               </span>
             </div>
             <p className="text-[11px] text-stone-400">
-              {apiKey 
-                ? 'Connected to Google Gemini' 
-                : ollamaModel 
-                ? `Local AI model (${ollamaModel}) active` 
-                : 'Simulating farm plot what-if scenarios'}
+              {badgeSub}
             </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-1">
           <button
-            onClick={() => setShowKeyInput(!showKeyInput)}
+            onClick={() => setShowConfig(!showConfig)}
             className={`p-2 rounded-lg text-xs transition-all border ${
-              apiKey 
+              showConfig || apiKey
                 ? 'text-amber-300 bg-amber-950/70 border-amber-600/80' 
                 : 'text-stone-400 hover:text-amber-200 hover:bg-stone-800 border-stone-800'
             }`}
-            title="Configure Gemini API Key"
+            title="Configure AI Models (Llama 3.2 / Qwen 3.5 / Gemini)"
           >
-            <Sparkles className="w-4 h-4" />
+            <Settings2 className="w-4 h-4" />
           </button>
           <button
             onClick={onClose}
@@ -191,23 +258,134 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
         </div>
       </div>
 
-      {/* Optional Gemini API Key Drawer Input */}
-      {showKeyInput && (
-        <div className="p-3 bg-stone-900 border-b border-amber-950 text-xs space-y-2">
+      {/* AI Configuration Drawer Panel */}
+      {showConfig && (
+        <div className="p-3.5 bg-stone-900 border-b border-amber-950 text-xs space-y-3">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-amber-200">Google Gemini API Key</span>
-            <span className="text-[10px] text-stone-400">Optional for live Gemini reasoning</span>
+            <span className="font-bold text-amber-200 flex items-center space-x-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>AI Engine & Model Selection</span>
+            </span>
+            <span className="text-[10px] text-stone-400">Llama • Qwen • Gemini</span>
           </div>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => saveApiKey(e.target.value)}
-            placeholder="Paste your Gemini API Key here (starts with AIza...)"
-            className="w-full bg-stone-950 border border-amber-900 rounded-lg px-2.5 py-1.5 text-xs text-amber-100 placeholder-stone-600 focus:outline-none focus:border-amber-500"
-          />
-          <p className="text-[10px] text-stone-400">
-            Stored locally in your browser. Allows you to ask completely arbitrary questions with live Gemini reasoning.
-          </p>
+
+          {/* Provider Selection */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-stone-300">Preferred AI Provider:</label>
+            <div className="grid grid-cols-3 gap-1.5 text-center font-mono text-[10px]">
+              <button
+                type="button"
+                onClick={() => savePreferredProvider('auto')}
+                className={`py-1.5 px-2 rounded border transition-all ${
+                  preferredProvider === 'auto'
+                    ? 'bg-amber-950 border-amber-500 text-amber-200 font-bold shadow-sm'
+                    : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
+                }`}
+              >
+                Auto (Cascade)
+              </button>
+              <button
+                type="button"
+                onClick={() => savePreferredProvider('ollama')}
+                className={`py-1.5 px-2 rounded border transition-all ${
+                  preferredProvider === 'ollama'
+                    ? 'bg-amber-950 border-amber-500 text-amber-200 font-bold shadow-sm'
+                    : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
+                }`}
+              >
+                Local Ollama
+              </button>
+              <button
+                type="button"
+                onClick={() => savePreferredProvider('gemini')}
+                className={`py-1.5 px-2 rounded border transition-all ${
+                  preferredProvider === 'gemini'
+                    ? 'bg-amber-950 border-amber-500 text-amber-200 font-bold shadow-sm'
+                    : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
+                }`}
+              >
+                Google Gemini
+              </button>
+            </div>
+          </div>
+
+          {/* Local Ollama Model Picker */}
+          {(preferredProvider === 'ollama' || preferredProvider === 'auto') && (
+            <div className="space-y-1.5 pt-2 border-t border-stone-800/80">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-stone-300">Local Model:</span>
+                <span className="text-[10px] font-mono text-emerald-400">
+                  Active: {localModel}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => saveLocalModel('llama3.2:1b')}
+                  className={`py-1.5 px-2 rounded text-[11px] font-mono border transition-all flex items-center justify-center space-x-1 ${
+                    localModel.includes('1b') || localModel.includes('3.2')
+                      ? 'bg-emerald-950 border-emerald-500 text-emerald-200 font-bold shadow-sm'
+                      : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
+                  }`}
+                  title="Ultra-fast 1B model, instant replies"
+                >
+                  <Zap className="w-3 h-3 text-amber-400" />
+                  <span>Llama 3.2 (1B)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => saveLocalModel('qwen3.5:latest')}
+                  className={`py-1.5 px-2 rounded text-[11px] font-mono border transition-all flex items-center justify-center space-x-1 ${
+                    localModel.includes('qwen')
+                      ? 'bg-emerald-950 border-emerald-500 text-emerald-200 font-bold shadow-sm'
+                      : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
+                  }`}
+                  title="Qwen reasoning model"
+                >
+                  <Cpu className="w-3 h-3 text-teal-400" />
+                  <span>Qwen 3.5</span>
+                </button>
+              </div>
+              {installedModels.length > 2 && (
+                <div className="pt-1">
+                  <select
+                    value={localModel}
+                    onChange={(e) => saveLocalModel(e.target.value)}
+                    className="w-full bg-stone-950 border border-stone-800 text-stone-300 text-[10px] rounded px-2 py-1"
+                  >
+                    {installedModels.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Google Gemini Settings */}
+          {(preferredProvider === 'gemini' || preferredProvider === 'auto') && (
+            <div className="space-y-2 pt-2 border-t border-stone-800/80">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-stone-300">Gemini Cloud API:</span>
+                <select
+                  value={geminiModel}
+                  onChange={(e) => saveGeminiModel(e.target.value)}
+                  className="bg-stone-950 border border-stone-800 text-amber-300 text-[10px] rounded px-1.5 py-0.5"
+                >
+                  <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                  <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                  <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                </select>
+              </div>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => saveApiKey(e.target.value)}
+                placeholder="AIzaSy... (leave blank to use backend .env)"
+                className="w-full bg-stone-950 border border-amber-900/80 rounded px-2.5 py-1.5 text-xs text-amber-100 placeholder-stone-600 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -220,23 +398,26 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
           <Sprout className="w-3 h-3 text-emerald-400" />
           <span>Health Check</span>
         </button>
+
         <button
-          onClick={() => handleSend('What if a 14-day drought hits my farm?')}
-          className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-950/70 text-amber-200 hover:bg-amber-900 border border-amber-700/60 transition-all shadow-sm"
-        >
-          <Flame className="w-3 h-3 text-amber-400" />
-          <span>☀️ 14-Day Drought</span>
-        </button>
-        <button
-          onClick={() => handleSend('What if heavy rainfall / flooding occurs?')}
+          onClick={() => handleSend('Apply drip irrigation across dry crop tiles to balance moisture')}
           className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-sky-950/70 text-sky-200 hover:bg-sky-900 border border-sky-700/60 transition-all shadow-sm"
         >
           <Droplets className="w-3 h-3 text-sky-400" />
-          <span>🌧️ Flood Scenario</span>
+          <span>💧 Apply Irrigation</span>
         </button>
+
         <button
-          onClick={() => handleSend('Calculate my harvest yield and compare wheat vs carrots')}
-          className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-yellow-950/70 text-yellow-200 hover:bg-yellow-900 border border-yellow-700/60 transition-all shadow-sm"
+          onClick={() => handleSend('Simulate a 14-day drought scenario: what happens to crop yield without rain?')}
+          className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-950/70 text-amber-200 hover:bg-amber-900 border border-amber-700/60 transition-all shadow-sm"
+        >
+          <Flame className="w-3 h-3 text-orange-400" />
+          <span>🔥 14-Day Drought What-If</span>
+        </button>
+
+        <button
+          onClick={() => handleSend('Compare wheat vs carrot crop yield and water efficiency for this layout')}
+          className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-stone-800 text-stone-200 hover:bg-stone-700 border border-stone-600 transition-all shadow-sm"
         >
           <Scale className="w-3 h-3 text-yellow-400" />
           <span>🌾 Yield & Comparison</span>
@@ -277,8 +458,12 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
               )}
 
               {/* Message Body */}
-              <div className="whitespace-pre-wrap leading-relaxed text-stone-200">
-                {msg.content}
+              <div className="leading-relaxed text-stone-200">
+                {msg.role === 'assistant' ? (
+                  <FormattedMessage content={msg.content} />
+                ) : (
+                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                )}
               </div>
 
               {/* Multi-step Execution Steps Accordion */}
@@ -347,29 +532,20 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
                 </div>
               )}
             </div>
-
-            <span className="text-[10px] text-stone-500 px-1 font-mono">
-              {msg.timestamp}
-            </span>
+            <span className="text-[10px] text-stone-500 px-2 font-mono">{msg.timestamp}</span>
           </div>
         ))}
-
         {isLoading && (
-          <div className="flex items-start space-x-2 text-stone-300 bg-stone-900/90 p-3 rounded-xl border border-amber-950 w-fit">
-            <RefreshCw className="w-4 h-4 text-amber-400 animate-spin mt-0.5" />
-            <div className="space-y-0.5 text-xs">
-              <p className="font-semibold text-amber-200">Evaluating Digital Twin What-If Scenario...</p>
-              <p className="text-[10px] text-stone-400 font-mono">
-                Computing agronomy metrics and farm recommendations
-              </p>
-            </div>
+          <div className="flex items-center space-x-2 text-stone-400 bg-stone-900/80 p-3 rounded-2xl border border-amber-950/80 w-fit">
+            <RefreshCw className="w-4 h-4 text-amber-400 animate-spin" />
+            <span className="font-mono text-[11px]">Reasoning with farm world state...</span>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Box */}
-      <div className="p-4 border-t border-amber-950 bg-stone-950/90">
+      {/* Input Form Footer */}
+      <div className="p-3.5 border-t border-amber-950/80 bg-stone-950">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -381,14 +557,15 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
             type="text"
             value={inputPrompt}
             onChange={(e) => setInputPrompt(e.target.value)}
-            placeholder="Ask about what-if events, drought, yields, layout..."
+            placeholder="Ask about crops, soil water, or what-if scenarios..."
             disabled={isLoading}
-            className="flex-1 bg-stone-900 border border-amber-950 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-xs text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 disabled:opacity-50"
+            className="flex-1 bg-stone-900 border border-amber-950/80 rounded-xl px-3.5 py-2.5 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-600/80 transition-colors disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!inputPrompt.trim() || isLoading}
-            className="p-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-stone-950 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md flex-shrink-0"
+            className="p-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-700 text-stone-950 font-bold hover:from-amber-400 hover:to-amber-600 border border-amber-400/80 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
+            title="Send Message"
           >
             <Send className="w-4 h-4" />
           </button>

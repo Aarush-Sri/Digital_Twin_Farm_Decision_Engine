@@ -1,5 +1,5 @@
 /**
- * DigiFarm REST API Client
+ * GreenTwin REST API Client
  * Connects frontend UI to FastAPI backend simulation engine, farm state manager, and AI agent orchestrator.
  */
 
@@ -157,13 +157,20 @@ export const apiClient = {
   /**
    * AI Orchestrator Agent
    */
-  async sendAgentChat(farmId, { prompt, chatHistory = [], maxSteps = 5 }) {
+  async getAgentStatus() {
+    return request('/api/v1/agent/status');
+  },
+
+  async sendAgentChat(farmId, { prompt, chatHistory = [], maxSteps = 5, geminiApiKey = null, model = null, preferredProvider = 'auto' }) {
     return request(`/api/v1/agent/${encodeURIComponent(farmId)}/chat`, {
       method: 'POST',
       body: JSON.stringify({
         prompt,
         chat_history: chatHistory,
         max_steps: maxSteps,
+        gemini_api_key: geminiApiKey,
+        model,
+        preferred_provider: preferredProvider,
       }),
     });
   },

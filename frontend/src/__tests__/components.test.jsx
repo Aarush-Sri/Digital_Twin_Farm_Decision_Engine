@@ -12,6 +12,7 @@ import { EnvironmentBar } from '../components/simulation/EnvironmentBar';
 import { WhatIfModal } from '../components/simulation/WhatIfModal';
 import { AgentChatDrawer } from '../components/agent/AgentChatDrawer';
 import { FarmProfileDrawer } from '../components/profile/FarmProfileDrawer';
+import { FormattedMessage } from '../components/agent/FormattedMessage';
 
 describe('Farm UI Components', () => {
   it('renders PaletteCard with label, category, and quick add button', () => {
@@ -35,9 +36,10 @@ describe('Farm UI Components', () => {
       </FarmProvider>
     );
 
-    expect(screen.getByText('DigiFarm')).toBeInTheDocument();
+    expect(screen.getByText('GreenTwin')).toBeInTheDocument();
     expect(screen.getByText('Farm Canvas')).toBeInTheDocument();
     expect(screen.getByText(/Placed Items:/)).toBeInTheDocument();
+    expect(screen.getByText('Preset Farm')).toBeInTheDocument();
     expect(screen.getByText(/Snap ON/)).toBeInTheDocument();
     expect(screen.getByText('Clear')).toBeInTheDocument();
   });
@@ -58,17 +60,18 @@ describe('Farm UI Components', () => {
     expect(screen.getByText('Carrot Patch')).toBeInTheDocument();
   });
 
-  it('renders FarmCanvas with empty state hint', () => {
+  it('renders FarmCanvas with default pre-designed preset farm items', () => {
     render(
       <FarmProvider>
         <FarmCanvas />
       </FarmProvider>
     );
 
-    expect(
-      screen.getByText(/Drag elements from the left palette to start planning/)
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Objects: 0/)).toBeInTheDocument();
+    // Preset farm items must be pre-loaded so user doesn't design every time
+    expect(screen.getByAltText('Timber Barn')).toBeInTheDocument();
+    expect(screen.getByAltText('Stone Well')).toBeInTheDocument();
+    expect(screen.getAllByAltText('Orchard Tree').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Objects: 22/)).toBeInTheDocument();
   });
 
   it('renders WhatIfModal when open and shows scenario presets', () => {
@@ -168,5 +171,31 @@ describe('Farm UI Components', () => {
     fireEvent.click(presetBtn);
 
     expect(screen.getByText('Save Profile Changes')).toBeInTheDocument();
+  });
+
+  it('renders FormattedMessage cleanly without raw markdown syntax', () => {
+    const rawMarkdown = `### ☀️ Scenario Analysis: Drought & Heat
+**Atmospheric Impact:**
+- Reference Evapotranspiration ($ET_0$): \`4.2 mm/day\`
+- Soil moisture drops rapidly with $CO_2$ halting
+1. Add Water Canals to maintain moisture
+| Crop | Yield |
+|---|---|
+| Wheat | 9.9 kg |`;
+
+    render(<FormattedMessage content={rawMarkdown} />);
+
+    // Headings, bold, inline code rendered as elements, not raw syntax
+    expect(screen.getByText(/Scenario Analysis: Drought & Heat/)).toBeInTheDocument();
+    expect(screen.queryByText(/###/)).not.toBeInTheDocument();
+    expect(screen.getByText('Atmospheric Impact:')).toBeInTheDocument();
+    expect(screen.getByText('4.2 mm/day')).toBeInTheDocument();
+    expect(screen.getByText(/ET₀/)).toBeInTheDocument();
+    expect(screen.getByText(/CO₂/)).toBeInTheDocument();
+    expect(screen.getByText('Add Water Canals to maintain moisture')).toBeInTheDocument();
+    // Tables rendered cleanly
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('Wheat')).toBeInTheDocument();
+    expect(screen.getByText('9.9 kg')).toBeInTheDocument();
   });
 });

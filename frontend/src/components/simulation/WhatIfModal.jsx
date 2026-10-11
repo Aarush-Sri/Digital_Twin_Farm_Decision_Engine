@@ -104,7 +104,7 @@ export const WhatIfModal = ({ isOpen, onClose }) => {
   const healthDiff = candidate && baseline ? (candidateHealth - baselineHealth).toFixed(1) : '0.0';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in select-none">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in select-none">
       <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="p-4 border-b border-zinc-800 bg-zinc-900/60 flex items-center justify-between">

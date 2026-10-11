@@ -227,7 +227,7 @@ export const FarmProfileDrawer = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-[9999] flex justify-end bg-black/60 backdrop-blur-sm animate-fadeIn">
       {/* Slide-over panel */}
       <div 
         className="w-full max-w-2xl bg-zinc-950 border-l border-zinc-800 shadow-2xl flex flex-col h-full text-zinc-100 select-none animate-slideLeft"

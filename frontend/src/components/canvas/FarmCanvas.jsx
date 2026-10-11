@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useFarm } from '../../hooks/useFarm';
 import { FarmItem } from './FarmItem';
-import { Sparkles, Grid } from 'lucide-react';
+import { Sparkles, Grid, LayoutTemplate } from 'lucide-react';
 
 export const FarmCanvas = () => {
   const {
@@ -17,6 +17,7 @@ export const FarmCanvas = () => {
     deleteItem,
     bringToFront,
     snapCoordinate,
+    loadPresetFarm,
   } = useFarm();
 
   const canvasRef = useRef(null);
@@ -76,7 +77,7 @@ export const FarmCanvas = () => {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={handleCanvasClick}
-      className="relative flex-1 h-full farm-canvas-grid farm-canvas-grid-fine overflow-hidden select-none"
+      className="relative flex-1 h-full farm-canvas-grid farm-canvas-grid-fine overflow-hidden select-none isolate z-0"
     >
       {/* Empty State Banner (Stardew / Clash of Clans Mission Board) */}
       {items.length === 0 && (
@@ -88,11 +89,22 @@ export const FarmCanvas = () => {
             
             <div className="space-y-1">
               <h3 className="text-base font-bold text-amber-200 tracking-wide font-sans">
-                Build Your Digital Twin Farm Plot
+                Build Your GreenTwin Farm Plot
               </h3>
               <p className="text-xs text-stone-300 leading-relaxed">
-                Drag elements from the left palette to start planning and building your digital twin:
+                Drag elements from the left palette or load a preset layout to start simulating:
               </p>
+            </div>
+
+            <div className="pt-1 pb-1">
+              <button
+                type="button"
+                onClick={() => loadPresetFarm('model')}
+                className="w-full py-2 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg border border-emerald-400/60 flex items-center justify-center space-x-2 transition-transform hover:scale-[1.02] active:scale-95 cursor-pointer"
+              >
+                <LayoutTemplate className="w-4 h-4 text-emerald-100" />
+                <span>🌾 Load Preset GreenTwin Farm</span>
+              </button>
             </div>
 
             <div className="grid grid-cols-4 gap-1.5 py-1 text-[10px] font-mono text-amber-100">

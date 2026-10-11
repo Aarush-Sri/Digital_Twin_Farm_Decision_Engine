@@ -213,4 +213,15 @@ describe('Farm Reducer State Transitions', () => {
     expect(state.farmProfile.soil_texture).toBe('silt');
     expect(state.farmName).toBe('Prairie Creek Farm');
   });
+
+  it('loads preset farm items and resets nextZIndex', () => {
+    const clearedState = farmReducer(INITIAL_STATE, { type: ACTION_TYPES.CLEAR_CANVAS });
+    expect(clearedState.items).toHaveLength(0);
+
+    const reloadedState = farmReducer(clearedState, {
+      type: ACTION_TYPES.LOAD_PRESET_FARM,
+    });
+    expect(reloadedState.items.length).toBeGreaterThan(10);
+    expect(reloadedState.selectedId).toBeNull();
+  });
 });

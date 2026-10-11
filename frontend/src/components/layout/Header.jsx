@@ -8,7 +8,8 @@ import {
   Sun,
   Droplets,
   Scale,
-  Settings
+  Settings,
+  LayoutTemplate
 } from 'lucide-react';
 
 export const Header = ({ onOpenAgentChat, onOpenProfile }) => {
@@ -16,6 +17,7 @@ export const Header = ({ onOpenAgentChat, onOpenProfile }) => {
     snapToGrid, 
     toggleSnap, 
     clearCanvas, 
+    loadPresetFarm,
     items,
     farmProfile,
     currentDay,
@@ -57,14 +59,14 @@ export const Header = ({ onOpenAgentChat, onOpenProfile }) => {
         <div>
           <div className="flex items-center space-x-2">
             <h1 className="text-base font-extrabold text-amber-200 tracking-wide font-sans drop-shadow-sm flex items-center space-x-2">
-              <span>DigiFarm</span>
+              <span>GreenTwin</span>
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-700/60 shadow-sm">
                 Farm Canvas
               </span>
             </h1>
           </div>
           <p className="text-[10px] text-stone-400 font-medium">
-            AgriTwin • Agricultural Decision Engine & Simulator
+            GreenTwin • Agricultural Decision Engine & Simulator
           </p>
         </div>
       </div>
@@ -147,6 +149,21 @@ export const Header = ({ onOpenAgentChat, onOpenProfile }) => {
         >
           <Magnet className={`w-3.5 h-3.5 ${snapToGrid ? 'text-emerald-400' : 'text-stone-500'}`} />
           <span>Snap {snapToGrid ? 'ON' : 'OFF'}</span>
+        </button>
+
+        {/* Preset Farm Button */}
+        <button
+          type="button"
+          onClick={() => {
+            if (items.length === 0 || window.confirm('Load the pre-designed GreenTwin farm layout? (This replaces current canvas items)')) {
+              loadPresetFarm('model');
+            }
+          }}
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-700/70 hover:bg-emerald-900/90 hover:text-emerald-200 transition-all shadow-sm"
+          title="Load pre-designed farm layout with crops, barn, canal & well"
+        >
+          <LayoutTemplate className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Preset Farm</span>
         </button>
 
         {/* Clear Canvas */}

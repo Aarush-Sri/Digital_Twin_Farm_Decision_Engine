@@ -1,18 +1,36 @@
 import { calculateZIndex, getItemDefinition } from '../types/farm';
+import { DEFAULT_PRESET_FARM, PRESET_FARMS } from '../types/presetFarm';
+
+export const getInitialFarmItems = () => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const saved = localStorage.getItem('greentwin_farm_items') || localStorage.getItem('digifarm_items');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load saved farm items from localStorage:', e);
+    }
+  }
+  return DEFAULT_PRESET_FARM;
+};
 
 export const INITIAL_STATE = {
-  // Canvas State
-  items: [],
+  // Canvas State: Preset Farm pre-loaded by default
+  items: DEFAULT_PRESET_FARM,
   selectedId: null,
   snapToGrid: true,
-  nextZIndex: 1,
+  nextZIndex: DEFAULT_PRESET_FARM.length + 1,
 
   // Backend Connection & Engine State
   backendStatus: 'connecting', // 'connecting' | 'connected' | 'offline' | 'error'
   backendError: null,
   isSyncing: false,
   farmId: null,
-  farmName: 'My Virtual Farm',
+  farmName: 'GreenTwin Model Farm',
   currentDay: 1,
   environment: {
     day: 1,
@@ -37,7 +55,7 @@ export const INITIAL_STATE = {
   },
   farmProfile: {
     // 1. Location & Topography
-    farm_name: 'My Virtual Farm',
+    farm_name: 'GreenTwin Model Farm',
     location_name: 'Salinas Valley, CA',
     country: 'United States',
     latitude_deg: 36.5,
@@ -87,6 +105,7 @@ export const ACTION_TYPES = {
   TOGGLE_SNAP: 'TOGGLE_SNAP',
   BRING_TO_FRONT: 'BRING_TO_FRONT',
   LOAD_SAVED_ITEMS: 'LOAD_SAVED_ITEMS',
+  LOAD_PRESET_FARM: 'LOAD_PRESET_FARM',
 
   // Backend & Simulation Actions
   SET_BACKEND_STATUS: 'SET_BACKEND_STATUS',
@@ -196,6 +215,16 @@ export const farmReducer = (state, action) => {
         ...state,
         items: items || [],
         selectedId: null,
+      };
+    }
+
+    case ACTION_TYPES.LOAD_PRESET_FARM: {
+      const presetItems = action.payload?.items || DEFAULT_PRESET_FARM;
+      return {
+        ...state,
+        items: presetItems,
+        selectedId: null,
+        nextZIndex: presetItems.length + 1,
       };
     }
 

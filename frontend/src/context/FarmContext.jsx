@@ -1,6 +1,7 @@
 import React, { createContext, useReducer, useMemo, useCallback, useEffect } from 'react';
 import { farmReducer, INITIAL_STATE, ACTION_TYPES } from './farmReducer';
 import { GRID_SIZE, ITEM_TYPES } from '../types/farm';
+import { DEFAULT_PRESET_FARM, PRESET_FARMS } from '../types/presetFarm';
 import { apiClient } from '../api/apiClient';
 
 export const FarmContext = createContext(null);
@@ -47,6 +48,25 @@ export const FarmProvider = ({ children }) => {
     dispatch({ type: ACTION_TYPES.CLEAR_CANVAS });
   }, []);
 
+  const loadPresetFarm = useCallback((presetKey = 'model') => {
+    const preset = PRESET_FARMS[presetKey]?.items || DEFAULT_PRESET_FARM;
+    dispatch({
+      type: ACTION_TYPES.LOAD_PRESET_FARM,
+      payload: { items: preset },
+    });
+  }, []);
+
+  // Persist farm layout to localStorage whenever items change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        localStorage.setItem('greentwin_farm_items', JSON.stringify(state.items));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [state.items]);
+
   const toggleSnap = useCallback(() => {
     dispatch({ type: ACTION_TYPES.TOGGLE_SNAP });
   }, []);
@@ -81,7 +101,7 @@ export const FarmProvider = ({ children }) => {
       await apiClient.checkHealth();
       
       // Create or get active farm session
-      const createRes = await apiClient.createFarm('Digital Farm 1', 10, 10);
+      const createRes = await apiClient.createFarm('GreenTwin Model Farm', 10, 10);
       const farmId = createRes.farm_id;
       const world = createRes.world;
 
@@ -310,10 +330,10 @@ export const FarmProvider = ({ children }) => {
 
       content = `### ☀️ Scenario Analysis: Drought & Heat Stress (14-Day Projection)\n\n`;
       content = content + `**Atmospheric Impact:**\n`;
-      content = content + `- **Reference Evapotranspiration ($ET_0$):** Spikes from \`4.2 mm/day\` up to \`7.5 mm/day\` due to elevated vapor pressure deficit (VPD).\n`;
+      content = content + `- **Reference Evapotranspiration (ET₀):** Spikes from \`4.2 mm/day\` up to \`7.5 mm/day\` due to elevated vapor pressure deficit (VPD).\n`;
       content = content + `- **Soil Moisture Depletion:** Soil moisture drops rapidly from \`65%\` down to \`~22%\` within 4–6 days without irrigation.\n\n`;
       content = content + `**Crop Phenology & Physiological Response:**\n`;
-      content = content + `- **Stomatal Conductance:** Crops close stomata to conserve water, halting $CO_2$ assimilation and photosynthesis.\n`;
+      content = content + `- **Stomatal Conductance:** Crops close stomata to conserve water, halting CO₂ assimilation and photosynthesis.\n`;
       content = content + `- **Canopy Stunting:** Leaf area expansion halts; wheat heads abort spikelets and carrot taproots become woody and fibrous.\n`;
       content = content + `- **Projected Harvest Impact:** Projected yield drops by **-${lossPct}%** (from ~${estYieldKg.toFixed(1)} kg down to **${stressedYield.toFixed(1)} kg**).\n\n`;
       content = content + `**🛡️ Recommended Mitigations:**\n`;
@@ -347,7 +367,7 @@ export const FarmProvider = ({ children }) => {
       content = content + `|---|---|---|---|\n`;
       content = content + `| **Default Footprint** | 2.0 × 2.0 m (80×80px) | 2.0 × 2.0 m (80×80px) | 1.0 × 1.0 m (40×40px) |\n`;
       content = content + `| **Root Depth** | 40–60 cm (fibrous) | 25–35 cm (taproot) | 80–120 cm (deep) |\n`;
-      content = content + `| **Water Demand ($K_c$)** | 1.15 (High at heading) | 1.05 (Moderate) | 0.85 (Steady) |\n`;
+      content = content + `| **Water Demand (Kc)** | 1.15 (High at heading) | 1.05 (Moderate) | 0.85 (Steady) |\n`;
       content = content + `| **Growth Cycle** | ~100–120 Days | ~70–80 Days | Perennial Harvest |\n`;
       content = content + `| **Yield per Unit** | ~9.9 kg biomass | ~8.4 kg fresh root | ~12.0 kg fruit |\n\n`;
       content = content + `**Agronomic Recommendation for Your Plot:**\n`;
@@ -446,7 +466,7 @@ export const FarmProvider = ({ children }) => {
 - Simulation Day: ${state.currentDay}
 - Ambient Weather: Temp avg 22°C, Solar Radiation 450 W/m², Reference ET0 4.2 mm/day`;
 
-    const systemInstruction = `You are DigiFarm's AI Agronomist and Digital Farmland Twin reasoning engine.
+    const systemInstruction = `You are GreenTwin's AI Agronomist and Digital Farmland Twin reasoning engine.
 You have full access to the user's virtual farm layout.
 ${farmContextStr}
 
@@ -482,62 +502,79 @@ Answer any question the user asks—whether about hypothetical scenarios ("what 
       });
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemInstruction }] },
-        contents,
-      }),
-    });
+    const candidateModels = [model || 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    let lastError = null;
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      const errMsg = err.error?.message || `Gemini API returned HTTP status ${res.status}`;
-      throw new Error(errMsg);
+    for (const mod of candidateModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${apiKey}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemInstruction }] },
+            contents,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+
+          return {
+            final_response: candidateText,
+            execution_steps: [
+              {
+                step: 1,
+                thought: `Invoked Google Gemini (${mod}) with live farm layout context and chat history.`,
+                action: 'gemini_multiturn_reasoning',
+                result: { model: mod, status: 'success' },
+              },
+            ],
+            actions_taken: ['gemini_inference'],
+            provider_used: 'Google Gemini',
+            model_used: mod,
+          };
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          lastError = errData.error?.message || `HTTP ${res.status}`;
+        }
+      } catch (err) {
+        lastError = err.message;
+      }
     }
 
-    const data = await res.json();
-    const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
-
-    return {
-      final_response: candidateText,
-      execution_steps: [
-        {
-          step: 1,
-          thought: 'Invoked Google Gemini 1.5 Flash with live farm layout context and chat history.',
-          action: 'gemini_multiturn_reasoning',
-          result: { model: 'gemini-1.5-flash-latest', status: 'success' },
-        },
-      ],
-      actions_taken: ['gemini_inference'],
-      provider_used: 'Google Gemini',
-      model_used: 'gemini-1.5-flash-latest',
-    };
+    throw new Error(lastError || 'Gemini API call failed across all candidate models.');
   };
 
   /**
-   * Direct Ollama client in browser when local Ollama daemon is running
+   * Direct Ollama client in browser when local Ollama daemon is running (Qwen 3.5 / 2.5)
    */
-  const callDirectOllama = async (prompt, chatHistory) => {
-    const crops = state.items.filter((i) => i.type === ITEM_TYPES.WHEAT || i.type === ITEM_TYPES.CARROT);
+  const callDirectOllama = async (prompt, chatHistory, requestedModel = null) => {
+    const crops = state.items.filter((i) => 
+      i.type === ITEM_TYPES.WHEAT || 
+      i.type === ITEM_TYPES.CARROT || 
+      i.type === ITEM_TYPES.TOMATO || 
+      i.type === ITEM_TYPES.CORN || 
+      i.type === ITEM_TYPES.PUMPKIN || 
+      i.type === ITEM_TYPES.STRAWBERRY
+    );
     const wheatCount = state.items.filter((i) => i.type === ITEM_TYPES.WHEAT).length;
     const carrotCount = state.items.filter((i) => i.type === ITEM_TYPES.CARROT).length;
-    const waterCount = state.items.filter((i) => i.type === ITEM_TYPES.WATER).length;
+    const waterCount = state.items.filter((i) => i.type === ITEM_TYPES.WATER || i.type === ITEM_TYPES.WELL).length;
     const treeCount = state.items.filter((i) => i.type === ITEM_TYPES.TREE).length;
     const grassCount = state.items.filter((i) => i.type === ITEM_TYPES.GRASS).length;
     const fenceCount = state.items.filter((i) => i.type === ITEM_TYPES.FENCE).length;
 
     const farmContextStr = `Current Farm Plot Context:
 - Total Placed Assets: ${state.items.length}
-- Cultivated Crops: ${crops.length} (${wheatCount} Wheat plots, ${carrotCount} Carrot patches)
-- Irrigation Infrastructure: ${waterCount} Water Canals
-- Perimeter & Flora: ${treeCount} Orchard Trees, ${fenceCount} Wood Fences, ${grassCount} Grass Plots
+- Cultivated Crops: ${crops.length} (${wheatCount} Wheat, ${carrotCount} Carrot)
+- Irrigation Infrastructure: ${waterCount} Water Canals/Wells
+- Perimeter & Flora: ${treeCount} Trees, ${fenceCount} Fences, ${grassCount} Grass Plots
 - Simulation Day: ${state.currentDay}
 - Ambient Weather: Temp avg 22°C, Solar Radiation 450 W/m², Reference ET0 4.2 mm/day`;
 
-    const systemInstruction = `You are DigiFarm's AI Agronomist and Digital Farmland Twin reasoning engine.
+    const systemInstruction = `You are GreenTwin's AI Agronomist and Digital Farmland Twin reasoning engine.
 You have full access to the virtual farm layout:
 ${farmContextStr}
 
@@ -551,7 +588,7 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
       { role: 'user', content: prompt },
     ];
 
-    let modelName = 'llama3.2:1b';
+    let modelName = requestedModel || 'qwen3.5';
     let baseOllamaUrl = '/ollama';
 
     try {
@@ -565,7 +602,16 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
         const tagsData = await tagsRes.json();
         const available = tagsData.models?.map((m) => m.name) || [];
         if (available.length > 0) {
-          modelName = available.includes('llama3.2:1b') ? 'llama3.2:1b' : available[0];
+          if (requestedModel) {
+            const exact = available.find((m) => m === requestedModel);
+            const partial = available.find((m) => m.toLowerCase().includes(requestedModel.toLowerCase()));
+            modelName = exact || partial || available[0];
+          } else {
+            // Prioritize Qwen or Llama 3.2:1b models installed in local Ollama
+            const qwenMatch = available.find((m) => m.toLowerCase().includes('qwen'));
+            const llamaMatch = available.find((m) => m.toLowerCase().includes('llama') || m.toLowerCase().includes('3.2'));
+            modelName = qwenMatch || llamaMatch || available[0];
+          }
         }
       }
     } catch {
@@ -579,6 +625,7 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
         model: modelName,
         messages,
         stream: false,
+        think: false,
         options: { temperature: 0.3 },
       }),
     });
@@ -588,14 +635,16 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     }
 
     const data = await res.json();
-    const reply = data.message?.content || 'No response generated.';
+    let reply = data.message?.content || 'No response generated.';
+    // Strip reasoning thinking tags if present
+    reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
     return {
       final_response: reply,
       execution_steps: [
         {
           step: 1,
-          thought: `Queried local Ollama model (${modelName}) with farm context and conversation history.`,
+          thought: `Queried local Ollama Qwen model (${modelName}) with farm context and conversation history.`,
           action: 'ollama_inference',
           result: { model: modelName, status: 'success' },
         },
@@ -609,34 +658,15 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
   /**
    * Send user prompt to Autonomous AI Agronomist Agent
    */
-  const sendAgentChat = useCallback(async (prompt, chatHistory = [], maxSteps = 5) => {
-    // 1. If user provided a Gemini API Key (in localStorage or env), query live Gemini model
-    const geminiKey = typeof window !== 'undefined' 
-      ? (localStorage.getItem('DIGIFARM_GEMINI_KEY') || import.meta.env?.VITE_GEMINI_API_KEY)
+  const sendAgentChat = useCallback(async (prompt, chatHistory = [], maxSteps = 5, options = {}) => {
+    const { preferredProvider = 'auto', model = null, geminiApiKey: customKey = null } = options;
+
+    const storedKey = typeof window !== 'undefined'
+      ? (localStorage.getItem('GREENTWIN_GEMINI_KEY') || localStorage.getItem('DIGIFARM_GEMINI_KEY') || import.meta.env?.VITE_GEMINI_API_KEY)
       : null;
+    const effectiveGeminiKey = (customKey || storedKey || '').trim();
 
-    if (geminiKey && geminiKey.trim()) {
-      try {
-        const geminiRes = await callDirectGemini(geminiKey.trim(), prompt, chatHistory);
-        return { success: true, data: geminiRes };
-      } catch (geminiErr) {
-        console.error('Direct Gemini API error:', geminiErr);
-        return {
-          success: false,
-          error: `Gemini API Error: ${geminiErr.message}. Please check your API key or network connection.`,
-        };
-      }
-    }
-
-    // 2. Direct Local Ollama connection (100% local, no key needed)
-    try {
-      const ollamaRes = await callDirectOllama(prompt, chatHistory);
-      return { success: true, data: ollamaRes };
-    } catch (ollamaErr) {
-      console.debug('Direct Ollama call not available, checking backend / local fallback:', ollamaErr);
-    }
-
-    // 3. If backend is connected, use FastAPI backend orchestrator
+    // 1. If backend is connected, prioritize the full multi-step backend agent
     if (state.farmId && state.backendStatus === 'connected') {
       try {
         if (state.items.length > 0) {
@@ -647,6 +677,9 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
           prompt,
           chatHistory,
           maxSteps,
+          geminiApiKey: effectiveGeminiKey || null,
+          model,
+          preferredProvider,
         });
 
         // Refresh farm state after agent execution
@@ -670,7 +703,33 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
 
         return { success: true, data: response };
       } catch (err) {
-        console.warn('Backend agent chat call failed, falling back to local agronomist:', err);
+        console.warn('Backend agent chat call failed, falling back to direct browser clients:', err);
+      }
+    }
+
+    // 2. Direct Gemini browser client if key is provided and not forced to Ollama
+    if (preferredProvider !== 'ollama' && effectiveGeminiKey) {
+      try {
+        const geminiRes = await callDirectGemini(effectiveGeminiKey, prompt, chatHistory, model);
+        return { success: true, data: geminiRes };
+      } catch (geminiErr) {
+        console.warn('Direct Gemini API error, attempting local fallback:', geminiErr);
+        if (preferredProvider === 'gemini') {
+          return {
+            success: false,
+            error: `Gemini API Error: ${geminiErr.message}. Check your API key.`,
+          };
+        }
+      }
+    }
+
+    // 3. Direct Local Ollama connection (Qwen 3.5 / 2.5)
+    if (preferredProvider !== 'gemini') {
+      try {
+        const ollamaRes = await callDirectOllama(prompt, chatHistory, model);
+        return { success: true, data: ollamaRes };
+      } catch (ollamaErr) {
+        console.debug('Direct Ollama call not available, checking local rules:', ollamaErr);
       }
     }
 
@@ -736,6 +795,7 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     deselectAll,
     deleteItem,
     clearCanvas,
+    loadPresetFarm,
     toggleSnap,
     bringToFront,
     snapCoordinate,
@@ -757,6 +817,7 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     deselectAll,
     deleteItem,
     clearCanvas,
+    loadPresetFarm,
     toggleSnap,
     bringToFront,
     snapCoordinate,
