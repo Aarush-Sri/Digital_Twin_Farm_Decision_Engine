@@ -83,31 +83,9 @@ export const PaletteCard = ({ itemDef, onQuickAdd }) => {
 
       {/* Info Body */}
       <div className="flex-1 min-w-0 pr-2">
-        <div className="flex items-center justify-between">
-          <h4 className="text-xs font-bold text-amber-100 group-hover:text-amber-300 tracking-wide truncate">
-            {itemDef.label}
-          </h4>
-          <span 
-            className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border flex items-center space-x-1 ${
-              isPoint 
-                ? 'text-cyan-300 bg-cyan-950/80 border-cyan-700/60' 
-                : 'text-emerald-400 bg-emerald-950/70 border-emerald-800/50'
-            }`}
-            title={isPoint ? 'Point icon: Fixed 2m × 2m shape' : 'Area plot: Freely resizable'}
-          >
-            {isPoint ? (
-              <>
-                <Lock className="w-2.5 h-2.5 text-cyan-400 inline mr-0.5" />
-                <span>2m × 2m</span>
-              </>
-            ) : (
-              <>
-                <Maximize2 className="w-2.5 h-2.5 text-emerald-400 inline mr-0.5" />
-                <span>{pxToMeters(itemDef.defaultWidth)} × {pxToMeters(itemDef.defaultHeight)}</span>
-              </>
-            )}
-          </span>
-        </div>
+        <h4 className="text-xs font-bold text-amber-100 group-hover:text-amber-300 tracking-wide truncate">
+          {itemDef.label}
+        </h4>
         <p className="text-[11px] text-stone-400 line-clamp-1 mt-0.5 font-sans">
           {itemDef.description}
         </p>

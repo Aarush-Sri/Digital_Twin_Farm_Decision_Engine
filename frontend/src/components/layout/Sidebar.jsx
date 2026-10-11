@@ -188,7 +188,7 @@ export const Sidebar = () => {
       <div className="p-3 border-t border-amber-950/80 bg-stone-900/40 text-[11px] text-stone-400 space-y-1.5">
         <div className="flex items-start space-x-2">
           <MousePointerClick className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
-          <span>Point icons (Trees, Wells) have fixed 2m×2m footprint.</span>
+          <span>Click any placed plot to move, select, or manage.</span>
         </div>
         <div className="flex items-start space-x-2">
           <Sparkles className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
@@ -197,8 +197,8 @@ export const Sidebar = () => {
 
         {selectedItem && (
           <div className="mt-2 pt-2 border-t border-stone-800 flex items-center justify-between font-mono text-[10px] text-amber-300">
-            <span className="truncate">Selected: {selectedItem.type.toUpperCase()}</span>
-            <span className="font-bold">{pxToMeters(selectedItem.width)} × {pxToMeters(selectedItem.height)}</span>
+            <span className="truncate">Selected Plot</span>
+            <span className="font-bold text-emerald-300 capitalize">{selectedItem.type}</span>
           </div>
         )}
       </div>

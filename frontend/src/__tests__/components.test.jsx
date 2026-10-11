@@ -29,7 +29,7 @@ describe('Farm UI Components', () => {
     expect(mockQuickAdd).toHaveBeenCalledWith(grassDef);
   });
 
-  it('renders Header with brand, placed item count, and snap controls', () => {
+  it('renders Header with clean AI title, Preset Farm, and active AI model badge', () => {
     render(
       <FarmProvider>
         <Header />
@@ -37,11 +37,9 @@ describe('Farm UI Components', () => {
     );
 
     expect(screen.getByText('GreenTwin')).toBeInTheDocument();
-    expect(screen.getByText('Farm Canvas')).toBeInTheDocument();
-    expect(screen.getByText(/Placed Items:/)).toBeInTheDocument();
     expect(screen.getByText('Preset Farm')).toBeInTheDocument();
-    expect(screen.getByText(/Snap ON/)).toBeInTheDocument();
-    expect(screen.getByText('Clear')).toBeInTheDocument();
+    expect(screen.getByText(/⚡ Ask AI/)).toBeInTheDocument();
+    expect(screen.getByText(/Llama 3.2/)).toBeInTheDocument();
   });
 
   it('renders Sidebar with all 6 farm items', () => {
@@ -86,7 +84,7 @@ describe('Farm UI Components', () => {
     expect(screen.getByText(/NPK Fertilizer Boost/)).toBeInTheDocument();
   });
 
-  it('renders AgentChatDrawer when open and shows multi-step console', () => {
+  it('renders AgentChatDrawer when open and shows multi-step console and active AI model indication', () => {
     render(
       <FarmProvider>
         <AgentChatDrawer isOpen={true} onClose={vi.fn()} />
@@ -95,6 +93,8 @@ describe('Farm UI Components', () => {
 
     expect(screen.getByText('AI Agronomist')).toBeInTheDocument();
     expect(screen.getByText('Health Check')).toBeInTheDocument();
+    expect(screen.getAllByText(/Active AI Model:/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Llama 3.2/i).length).toBeGreaterThan(0);
   });
 
   it('updates dimensions from DimensionBadge numeric inputs and presets', () => {
@@ -117,6 +117,7 @@ describe('Farm UI Components', () => {
         onUpdateDimensions={mockUpdateDimensions}
         onDelete={mockDelete}
         onBringToFront={mockBringToFront}
+        showDimensions={true}
       />
     );
 

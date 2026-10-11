@@ -12,89 +12,32 @@ import {
   Cpu, 
   RefreshCw,
   HelpCircle,
-  Sun,
-  CloudRain,
-  Thermometer,
-  ArrowRight,
-  Sliders,
-  Columns,
-  Settings2,
+  Flame,
   Droplets,
   Sprout,
-  Flame,
   Scale,
+  Settings2,
   Zap
 } from 'lucide-react';
-import { ScenarioComparisonModal } from '../simulation/ScenarioComparisonModal';
-import { FormattedChatMessage } from './FormattedChatMessage';
-import { FormattedMessage } from './FormattedMessage';
 import { apiClient } from '../../api/apiClient';
-
-const PRESET_SCENARIOS = [
-  {
-    id: 'drought',
-    icon: Sun,
-    title: 'Drought',
-    subtitle: 'Less rainfall for 14 days',
-    yieldDelta: '-12%',
-    yieldDeltaPct: -12,
-    waterDemand: 'Higher',
-    predictSummary: 'Some crop areas may experience moisture stress if the rainfall deficit continues and irrigation remains unchanged.',
-    actions: [
-      { title: 'Review irrigation priorities', desc: 'Prioritize the most water-sensitive crop areas.' },
-      { title: 'Compare another scenario', desc: 'Test what changes if irrigation is increased.' }
-    ]
-  },
-  {
-    id: 'heavy_rainfall',
-    icon: CloudRain,
-    title: 'Heavy rainfall',
-    subtitle: 'Test flooding risk',
-    yieldDelta: '-8%',
-    yieldDeltaPct: -8,
-    waterDemand: 'Saturated',
-    predictSummary: 'Soil saturation exceeds 85%, increasing root hypoxia risks in low-lying crop beds and slowing nutrient absorption.',
-    actions: [
-      { title: 'Elevate perimeter drainage', desc: 'Ensure water runoff flows to catchment ponds.' },
-      { title: 'Monitor root pathogens', desc: 'Inspect susceptible root vegetables for fungal wilt.' }
-    ]
-  },
-  {
-    id: 'heatwave',
-    icon: Thermometer,
-    title: 'Heatwave',
-    subtitle: 'Higher temperatures',
-    yieldDelta: '-15%',
-    yieldDeltaPct: -15,
-    waterDemand: 'Very High',
-    predictSummary: 'Peak daytime temperatures exceed 34°C, triggering rapid stomatal closure and doubling crop evapotranspiration demand.',
-    actions: [
-      { title: 'Provide tree windbreak shading', desc: 'Canopy shading reduces leaf scorch by up to 20%.' },
-      { title: 'Schedule nocturnal irrigation', desc: 'Water during night hours to minimize evaporation.' }
-    ]
-  },
-  {
-    id: 'irrigation_change',
-    icon: Droplets,
-    title: 'Irrigation change',
-    subtitle: 'Adjust watering frequency',
-    yieldDelta: '+18%',
-    yieldDeltaPct: 18,
-    waterDemand: 'Optimized',
-    predictSummary: 'Targeted drip irrigation maintains soil moisture consistently above 60%, boosting vegetative growth rates.',
-    actions: [
-      { title: 'Expand drip coverage', desc: 'Extend water canals adjacent to outer crop rows.' },
-      { title: 'Calibrate flow rate', desc: 'Keep watering rate steady at 6.0 mm/day.' }
-    ]
-  }
-];
+import { FormattedMessage } from './FormattedMessage';
 
 export const AgentChatDrawer = ({ isOpen, onClose }) => {
-  const { sendAgentChat, farmName, items } = useFarm();
-  const [activeTab, setActiveTab] = useState('scenarios'); // 'scenarios' | 'chat'
-  const [selectedScenario, setSelectedScenario] = useState(null);
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [showComparisonModal, setShowComparisonModal] = useState(false);
+  const { 
+    sendAgentChat, 
+    backendStatus, 
+    farmName, 
+    currentDay,
+    aiProvider: contextAiProvider,
+    setAiProvider: contextSetAiProvider,
+    geminiModel: contextGeminiModel,
+    setGeminiModel: contextSetGeminiModel,
+    localModel: contextLocalModel,
+    setLocalModel: contextSetLocalModel,
+    geminiApiKey: contextGeminiApiKey,
+    setGeminiApiKey: contextSetGeminiApiKey,
+    activeAiModel: contextActiveAiModel,
+  } = useFarm();
 
   const [messages, setMessages] = useState([
     {
@@ -109,28 +52,27 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState({});
   const [showConfig, setShowConfig] = useState(false);
-  const [showKeyInput, setShowKeyInput] = useState(false);
   
-  // AI Provider & Key Settings
+  // AI Provider & Key Settings (synced with Context & localStorage)
   const [apiKey, setApiKey] = useState(() => {
-    return typeof window !== 'undefined'
+    return contextGeminiApiKey || (typeof window !== 'undefined'
       ? localStorage.getItem('GREENTWIN_GEMINI_KEY') || localStorage.getItem('DIGIFARM_GEMINI_KEY') || ''
-      : '';
+      : '');
   });
   const [preferredProvider, setPreferredProvider] = useState(() => {
-    return typeof window !== 'undefined'
+    return contextAiProvider || (typeof window !== 'undefined'
       ? localStorage.getItem('GREENTWIN_AI_PROVIDER') || localStorage.getItem('DIGIFARM_AI_PROVIDER') || 'auto'
-      : 'auto';
+      : 'auto');
   });
   const [geminiModel, setGeminiModel] = useState(() => {
-    return typeof window !== 'undefined'
+    return contextGeminiModel || (typeof window !== 'undefined'
       ? localStorage.getItem('GREENTWIN_GEMINI_MODEL') || localStorage.getItem('DIGIFARM_GEMINI_MODEL') || 'gemini-2.5-flash'
-      : 'gemini-2.5-flash';
+      : 'gemini-2.5-flash');
   });
   const [localModel, setLocalModel] = useState(() => {
-    return typeof window !== 'undefined'
+    return contextLocalModel || (typeof window !== 'undefined'
       ? localStorage.getItem('GREENTWIN_LOCAL_MODEL') || 'llama3.2:1b'
-      : 'llama3.2:1b';
+      : 'llama3.2:1b');
   });
   const [installedModels, setInstalledModels] = useState(['llama3.2:1b', 'qwen3.5:latest']);
   const [backendAgentStatus, setBackendAgentStatus] = useState(null);
@@ -139,6 +81,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
 
   const saveApiKey = (key) => {
     setApiKey(key);
+    if (contextSetGeminiApiKey) contextSetGeminiApiKey(key);
     if (typeof window !== 'undefined') {
       if (key.trim()) {
         localStorage.setItem('GREENTWIN_GEMINI_KEY', key.trim());
@@ -151,6 +94,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
 
   const savePreferredProvider = (prov) => {
     setPreferredProvider(prov);
+    if (contextSetAiProvider) contextSetAiProvider(prov);
     if (typeof window !== 'undefined') {
       localStorage.setItem('GREENTWIN_AI_PROVIDER', prov);
     }
@@ -158,6 +102,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
 
   const saveGeminiModel = (mod) => {
     setGeminiModel(mod);
+    if (contextSetGeminiModel) contextSetGeminiModel(mod);
     if (typeof window !== 'undefined') {
       localStorage.setItem('GREENTWIN_GEMINI_MODEL', mod);
     }
@@ -165,6 +110,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
 
   const saveLocalModel = (mod) => {
     setLocalModel(mod);
+    if (contextSetLocalModel) contextSetLocalModel(mod);
     if (typeof window !== 'undefined') {
       localStorage.setItem('GREENTWIN_LOCAL_MODEL', mod);
     }
@@ -212,23 +158,9 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
     }
   }, [messages, isOpen]);
 
-  const handleRunScenario = (sc) => {
-    setIsSimulating(true);
-    setSelectedScenario(null);
-
-    // Simulate fast realistic calculation
-    setTimeout(() => {
-      setSelectedScenario(sc);
-      setIsSimulating(false);
-    }, 450);
-  };
-
   const handleSend = async (customPrompt) => {
     const promptToSend = customPrompt || inputPrompt;
     if (!promptToSend.trim() || isLoading) return;
-
-    // Automatically switch to chat tab
-    setActiveTab('chat');
 
     const userMessageId = `user-${Date.now()}`;
     const userMsg = {
@@ -291,38 +223,46 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   // Active Provider & Model Label
-  let badgeLabel = 'Twin Engine';
-  let badgeSub = 'Simulating farm plot what-if scenarios';
-  if (preferredProvider === 'gemini' || (preferredProvider === 'auto' && (apiKey || backendAgentStatus?.gemini?.configured))) {
-    badgeLabel = `Gemini (${geminiModel.replace('gemini-', '')})`;
-    badgeSub = 'Google Gemini Cloud Intelligence';
-  } else if (preferredProvider === 'ollama' || preferredProvider === 'auto') {
-    badgeLabel = localModel.includes('1b') ? 'Llama 3.2 (1B)' : localModel.includes('qwen') ? 'Qwen 3.5' : localModel;
-    badgeSub = 'Local Ollama Neural Model';
-  }
+  const effectiveActiveModel = contextActiveAiModel || {
+    label: preferredProvider === 'gemini' 
+      ? geminiModel.replace('gemini-', 'Gemini ')
+      : (localModel.includes('1b') ? 'Llama 3.2 (1B)' : localModel.includes('qwen') ? 'Qwen 3.5' : localModel),
+    shortLabel: preferredProvider === 'gemini'
+      ? geminiModel.replace('gemini-', 'Gemini ')
+      : (localModel.includes('1b') ? 'Llama 3.2' : localModel.includes('qwen') ? 'Qwen 3.5' : localModel),
+    providerLabel: preferredProvider === 'gemini' ? 'Google Gemini' : preferredProvider === 'auto' ? 'Auto Cascade' : 'Local Ollama',
+    isLocal: preferredProvider !== 'gemini',
+  };
 
   return (
-    <>
-      <div className="fixed inset-y-0 right-0 w-full sm:w-[500px] bg-gradient-to-b from-stone-950 via-stone-900 to-stone-950 border-l-2 border-amber-800/80 shadow-[-10px_0_30px_rgba(0,0,0,0.8)] z-50 flex flex-col transition-all duration-300 select-none">
-        {/* Header */}
-        <div className="p-4 border-b border-amber-950/80 flex items-center justify-between bg-stone-950/90 shadow-md flex-shrink-0">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600 to-amber-900 border-2 border-amber-400 flex items-center justify-center text-amber-100 shadow-md">
-              <Sparkles className="w-5 h-5 drop-shadow" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h3 className="text-sm font-extrabold text-amber-200 tracking-wide font-sans">
-                  AI Agronomist
-                </h3>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-600/70 shadow-sm">
-                  {badgeLabel || (apiKey ? 'Gemini Live' : 'Twin Engine')}
+    <div className="fixed inset-y-0 right-0 w-full sm:w-[480px] bg-gradient-to-b from-stone-950 via-stone-900 to-stone-950 border-l-2 border-amber-800/80 shadow-[-10px_0_30px_rgba(0,0,0,0.8)] z-50 flex flex-col transition-all duration-300">
+      {/* Header */}
+      <div className="p-4 border-b border-amber-950/80 flex items-center justify-between bg-stone-950/90 shadow-md">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600 to-amber-900 border-2 border-amber-400 flex items-center justify-center text-amber-100 shadow-md">
+            <Bot className="w-5 h-5 drop-shadow" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-sm font-extrabold text-amber-200 tracking-wide font-sans">
+                AI Agronomist
+              </h3>
+              {/* Active Model Pill Badge with Pulsing Live Indicator */}
+              <div 
+                className="flex items-center space-x-1.5 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/70 shadow-sm"
+                title={`Active AI Model: ${effectiveActiveModel.label} via ${effectiveActiveModel.providerLabel}`}
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
+                <span>ACTIVE: {effectiveActiveModel.label}</span>
               </div>
-              <p className="text-[11px] text-stone-400">
-                {badgeSub || 'Decision engine & what-if farm simulator'}
-              </p>
             </div>
+            <p className="text-[11px] text-stone-400">
+              Provider: <span className="text-emerald-400/95 font-medium">{effectiveActiveModel.providerLabel}</span> • Simulating farm plot what-if scenarios
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center space-x-1">
@@ -357,42 +297,89 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
             <span className="text-[10px] text-stone-400">Llama • Qwen • Gemini</span>
           </div>
 
+          {/* Active AI Model Status Banner */}
+          <div className="p-2.5 rounded-xl bg-gradient-to-r from-emerald-950/80 via-stone-900 to-emerald-950/60 border border-emerald-500/70 flex items-center justify-between shadow-inner">
+            <div className="flex items-center space-x-2.5">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <div>
+                <div className="text-[11px] font-bold text-emerald-200 flex items-center space-x-1.5">
+                  <span className="text-stone-400 font-normal">Active AI Model:</span>
+                  <span className="font-mono text-emerald-300 font-extrabold bg-stone-950 px-2 py-0.5 rounded border border-emerald-600/40 shadow-sm">
+                    {effectiveActiveModel.label}
+                  </span>
+                </div>
+                <div className="text-[10px] text-stone-400 mt-0.5 font-mono">
+                  Engine: <span className="text-emerald-400 font-bold">{effectiveActiveModel.providerLabel}</span>
+                  <span className="text-stone-500 mx-1">•</span>
+                  <span>{effectiveActiveModel.isLocal ? 'On-Device Weights (Ollama)' : 'Google Cloud Intelligence'}</span>
+                </div>
+              </div>
+            </div>
+            <span className="text-[10px] uppercase font-mono font-bold px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/60 shadow-sm flex items-center space-x-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+              <span>ACTIVE</span>
+            </span>
+          </div>
+
           {/* Provider Selection */}
           <div className="space-y-1">
-            <label className="text-[11px] font-medium text-stone-300">Preferred AI Provider:</label>
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-medium text-stone-300">Preferred AI Provider:</label>
+              <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                Active: {preferredProvider.toUpperCase()}
+              </span>
+            </div>
             <div className="grid grid-cols-3 gap-1.5 text-center font-mono text-[10px]">
               <button
                 type="button"
                 onClick={() => savePreferredProvider('auto')}
-                className={`py-1.5 px-2 rounded border transition-all ${
+                className={`py-1.5 px-2 rounded border transition-all flex items-center justify-center space-x-1 ${
                   preferredProvider === 'auto'
                     ? 'bg-amber-950 border-amber-500 text-amber-200 font-bold shadow-sm'
                     : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
                 }`}
               >
-                Auto (Cascade)
+                <span>Auto</span>
+                {preferredProvider === 'auto' && (
+                  <span className="text-[8px] bg-emerald-900/80 text-emerald-300 px-1 py-0.2 rounded font-mono font-bold">
+                    ✓ ACTIVE
+                  </span>
+                )}
               </button>
               <button
                 type="button"
                 onClick={() => savePreferredProvider('ollama')}
-                className={`py-1.5 px-2 rounded border transition-all ${
+                className={`py-1.5 px-2 rounded border transition-all flex items-center justify-center space-x-1 ${
                   preferredProvider === 'ollama'
                     ? 'bg-amber-950 border-amber-500 text-amber-200 font-bold shadow-sm'
                     : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
                 }`}
               >
-                Local Ollama
+                <span>Local Ollama</span>
+                {preferredProvider === 'ollama' && (
+                  <span className="text-[8px] bg-emerald-900/80 text-emerald-300 px-1 py-0.2 rounded font-mono font-bold">
+                    ✓ ACTIVE
+                  </span>
+                )}
               </button>
               <button
                 type="button"
                 onClick={() => savePreferredProvider('gemini')}
-                className={`py-1.5 px-2 rounded border transition-all ${
+                className={`py-1.5 px-2 rounded border transition-all flex items-center justify-center space-x-1 ${
                   preferredProvider === 'gemini'
                     ? 'bg-amber-950 border-amber-500 text-amber-200 font-bold shadow-sm'
                     : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
                 }`}
               >
-                Google Gemini
+                <span>Google Gemini</span>
+                {preferredProvider === 'gemini' && (
+                  <span className="text-[8px] bg-emerald-900/80 text-emerald-300 px-1 py-0.2 rounded font-mono font-bold">
+                    ✓ ACTIVE
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -401,37 +388,56 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
           {(preferredProvider === 'ollama' || preferredProvider === 'auto') && (
             <div className="space-y-1.5 pt-2 border-t border-stone-800/80">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-stone-300">Local Model:</span>
-                <span className="text-[10px] font-mono text-emerald-400">
-                  Active: {localModel}
+                <span className="text-[11px] font-medium text-stone-300">Local Neural Model:</span>
+                <span className="text-[10px] font-mono text-emerald-400 font-bold flex items-center space-x-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+                  <span>Active: {localModel}</span>
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
                   onClick={() => saveLocalModel('llama3.2:1b')}
-                  className={`py-1.5 px-2 rounded text-[11px] font-mono border transition-all flex items-center justify-center space-x-1 ${
+                  className={`py-1.5 px-2.5 rounded text-[11px] font-mono border transition-all flex items-center justify-between ${
                     localModel.includes('1b') || localModel.includes('3.2')
-                      ? 'bg-emerald-950 border-emerald-500 text-emerald-200 font-bold shadow-sm'
+                      ? 'bg-emerald-950 border-emerald-500 text-emerald-200 font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]'
                       : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
                   }`}
                   title="Ultra-fast 1B model, instant replies"
                 >
-                  <Zap className="w-3 h-3 text-amber-400" />
-                  <span>Llama 3.2 (1B)</span>
+                  <div className="flex items-center space-x-1.5">
+                    <Zap className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Llama 3.2 (1B)</span>
+                  </div>
+                  {(localModel.includes('1b') || localModel.includes('3.2')) ? (
+                    <span className="text-[9px] bg-emerald-500 text-stone-950 font-sans font-bold px-1.5 py-0.2 rounded shadow-sm">
+                      ✓ ACTIVE
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-stone-500">Select</span>
+                  )}
                 </button>
                 <button
                   type="button"
                   onClick={() => saveLocalModel('qwen3.5:latest')}
-                  className={`py-1.5 px-2 rounded text-[11px] font-mono border transition-all flex items-center justify-center space-x-1 ${
+                  className={`py-1.5 px-2.5 rounded text-[11px] font-mono border transition-all flex items-center justify-between ${
                     localModel.includes('qwen')
-                      ? 'bg-emerald-950 border-emerald-500 text-emerald-200 font-bold shadow-sm'
+                      ? 'bg-emerald-950 border-emerald-500 text-emerald-200 font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]'
                       : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
                   }`}
                   title="Qwen reasoning model"
                 >
-                  <Cpu className="w-3 h-3 text-teal-400" />
-                  <span>Qwen 3.5</span>
+                  <div className="flex items-center space-x-1.5">
+                    <Cpu className="w-3.5 h-3.5 text-teal-400" />
+                    <span>Qwen 3.5</span>
+                  </div>
+                  {localModel.includes('qwen') ? (
+                    <span className="text-[9px] bg-emerald-500 text-stone-950 font-sans font-bold px-1.5 py-0.2 rounded shadow-sm">
+                      ✓ ACTIVE
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-stone-500">Select</span>
+                  )}
                 </button>
               </div>
               {installedModels.length > 2 && (
@@ -442,7 +448,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
                     className="w-full bg-stone-950 border border-stone-800 text-stone-300 text-[10px] rounded px-2 py-1"
                   >
                     {installedModels.map((m) => (
-                      <option key={m} value={m}>{m}</option>
+                      <option key={m} value={m}>{m} {m === localModel ? '(Active)' : ''}</option>
                     ))}
                   </select>
                 </div>
@@ -455,15 +461,22 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
             <div className="space-y-2 pt-2 border-t border-stone-800/80">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-medium text-stone-300">Gemini Cloud API:</span>
-                <select
-                  value={geminiModel}
-                  onChange={(e) => saveGeminiModel(e.target.value)}
-                  className="bg-stone-950 border border-stone-800 text-amber-300 text-[10px] rounded px-1.5 py-0.5"
-                >
-                  <option value="gemini-2.5-flash">gemini-2.5-flash</option>
-                  <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-                  <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-                </select>
+                <div className="flex items-center space-x-1.5">
+                  <select
+                    value={geminiModel}
+                    onChange={(e) => saveGeminiModel(e.target.value)}
+                    className="bg-stone-950 border border-stone-800 text-amber-300 text-[10px] rounded px-1.5 py-0.5"
+                  >
+                    <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                    <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                    <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                  </select>
+                  {preferredProvider === 'gemini' && (
+                    <span className="text-[9px] bg-emerald-500 text-stone-950 font-sans font-bold px-1.5 py-0.2 rounded shadow-sm">
+                      ✓ ACTIVE
+                    </span>
+                  )}
+                </div>
               </div>
               <input
                 type="password"
@@ -477,368 +490,211 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
         </div>
       )}
 
-        {/* Tab Selector: Scenarios vs Chat */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-amber-950/80 bg-stone-900/60 flex-shrink-0">
-          <div className="flex items-center space-x-1 p-1 bg-stone-950 rounded-lg border border-stone-800 text-xs w-full">
-            <button
-              type="button"
-              onClick={() => setActiveTab('scenarios')}
-              className={`flex-1 py-1.5 rounded-md font-bold transition-all flex items-center justify-center space-x-1.5 ${
-                activeTab === 'scenarios'
-                  ? 'bg-amber-600 text-stone-950 shadow-sm'
-                  : 'text-stone-400 hover:text-stone-200'
+      {/* Suggested Quick Prompts (RPG Quest / What-If Scenarios) */}
+      <div className="px-3.5 py-2.5 bg-stone-950/80 border-b border-amber-950/80 flex items-center space-x-2 overflow-x-auto text-xs no-scrollbar">
+        <button
+          onClick={() => handleSend('Inspect current crop health and soil moisture')}
+          className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-950/70 text-emerald-200 hover:bg-emerald-900 border border-emerald-700/60 transition-all shadow-sm"
+        >
+          <Sprout className="w-3 h-3 text-emerald-400" />
+          <span>Health Check</span>
+        </button>
+
+        <button
+          onClick={() => handleSend('Apply drip irrigation across dry crop tiles to balance moisture')}
+          className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-sky-950/70 text-sky-200 hover:bg-sky-900 border border-sky-700/60 transition-all shadow-sm"
+        >
+          <Droplets className="w-3 h-3 text-sky-400" />
+          <span>💧 Apply Irrigation</span>
+        </button>
+
+        <button
+          onClick={() => handleSend('Simulate a 14-day drought scenario: what happens to crop yield without rain?')}
+          className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-950/70 text-amber-200 hover:bg-amber-900 border border-amber-700/60 transition-all shadow-sm"
+        >
+          <Flame className="w-3 h-3 text-orange-400" />
+          <span>🔥 14-Day Drought What-If</span>
+        </button>
+
+        <button
+          onClick={() => handleSend('Compare wheat vs carrot crop yield and water efficiency for this layout')}
+          className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-stone-800 text-stone-200 hover:bg-stone-700 border border-stone-600 transition-all shadow-sm"
+        >
+          <Scale className="w-3 h-3 text-yellow-400" />
+          <span>🌾 Yield & Comparison</span>
+        </button>
+      </div>
+
+      {/* Messages Feed */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`flex flex-col space-y-1.5 ${
+              msg.role === 'user' ? 'items-end' : 'items-start'
+            }`}
+          >
+            <div
+              className={`max-w-[90%] rounded-2xl p-3.5 ${
+                msg.role === 'user'
+                  ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-stone-50 rounded-tr-sm shadow-md border border-amber-500/50'
+                  : msg.isError
+                  ? 'bg-red-950/90 border border-red-800 text-red-200 rounded-tl-sm'
+                  : 'bg-stone-900/95 border-2 border-amber-950/90 text-stone-200 rounded-tl-sm shadow-lg'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Simulation Panel</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('chat')}
-              className={`flex-1 py-1.5 rounded-md font-bold transition-all flex items-center justify-center space-x-1.5 ${
-                activeTab === 'chat'
-                  ? 'bg-amber-600 text-stone-950 shadow-sm'
-                  : 'text-stone-400 hover:text-stone-200'
-              }`}
-            >
-              <Bot className="w-3.5 h-3.5" />
-              <span>Freeform Chat ({messages.length - 1})</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Optional Gemini Key Input */}
-        {showKeyInput && (
-          <div className="p-3 bg-stone-900 border-b border-amber-950 text-xs space-y-2 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-amber-200">Google Gemini API Key</span>
-              <span className="text-[10px] text-stone-400">Optional for live Gemini reasoning</span>
-            </div>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => saveApiKey(e.target.value)}
-              placeholder="Paste your Gemini API Key here (starts with AIza...)"
-              className="w-full bg-stone-950 border border-amber-900 rounded-lg px-2.5 py-1.5 text-xs text-amber-100 placeholder-stone-600 focus:outline-none focus:border-amber-500"
-            />
-          </div>
-        )}
-
-        {/* Quick Suggestion Chips (Always available across both views) */}
-        <div className="px-3.5 py-2 bg-stone-950/80 border-b border-amber-950/80 flex items-center space-x-2 overflow-x-auto text-xs no-scrollbar flex-shrink-0">
-          <button
-            onClick={() => handleSend('Inspect current crop health and soil moisture')}
-            className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-950/70 text-emerald-200 hover:bg-emerald-900 border border-emerald-700/60 transition-all shadow-sm"
-          >
-            <Sprout className="w-3 h-3 text-emerald-400" />
-            <span>Health Check</span>
-          </button>
-          <button
-            onClick={() => handleSend('What if a 14-day drought hits my farm?')}
-            className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-950/70 text-amber-200 hover:bg-amber-900 border border-amber-700/60 transition-all shadow-sm"
-          >
-            <Flame className="w-3 h-3 text-amber-400" />
-            <span>14-Day Drought</span>
-          </button>
-          <button
-            onClick={() => handleSend('What if heavy rainfall / flooding occurs?')}
-            className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-sky-950/70 text-sky-200 hover:bg-sky-900 border border-sky-700/60 transition-all shadow-sm"
-          >
-            <Droplets className="w-3 h-3 text-sky-400" />
-            <span>Flood Scenario</span>
-          </button>
-          <button
-            onClick={() => handleSend('Calculate my harvest yield and compare wheat vs carrots')}
-            className="flex-shrink-0 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-yellow-950/70 text-yellow-200 hover:bg-yellow-900 border border-yellow-700/60 transition-all shadow-sm"
-          >
-            <Scale className="w-3 h-3 text-yellow-400" />
-            <span>Yield & Comparison</span>
-          </button>
-        </div>
-
-        {/* ======================================================== */}
-        {/* VIEW 1: DEDICATED SIMULATION PANEL (Screenshots 110531 & 110601) */}
-        {/* ======================================================== */}
-        {activeTab === 'scenarios' && (
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Scenario Grid Question Heading */}
-            <div className="space-y-1">
-              <h4 className="text-xs font-bold text-stone-200">
-                What would you like to test on your farm?
-              </h4>
-              <p className="text-[11px] text-stone-400">
-                Select an environmental scenario to run a digital twin stress simulation:
-              </p>
-            </div>
-
-            {/* 4 Cards Grid (Screenshot 110531) */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {PRESET_SCENARIOS.map((sc) => {
-                const IconComp = sc.icon;
-                const isSelected = selectedScenario?.id === sc.id;
-                return (
-                  <button
-                    key={sc.id}
-                    type="button"
-                    onClick={() => handleRunScenario(sc)}
-                    className={`p-3.5 rounded-xl border text-left transition-all relative overflow-hidden group shadow-md ${
-                      isSelected
-                        ? 'bg-amber-950/50 border-amber-500 shadow-amber-900/30'
-                        : 'bg-stone-900/80 hover:bg-stone-850 border-stone-800 hover:border-amber-600/70'
-                    }`}
-                  >
-                    <IconComp className="w-5 h-5 text-amber-400 mb-2 group-hover:scale-110 transition-transform" />
-                    <h5 className="text-xs font-bold text-stone-100 group-hover:text-amber-200">
-                      {sc.title}
-                    </h5>
-                    <p className="text-[10px] text-stone-400 mt-0.5 line-clamp-1">
-                      {sc.subtitle}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Simulating Loader */}
-            {isSimulating && (
-              <div className="p-4 rounded-xl bg-stone-900/90 border border-amber-900 flex items-center space-x-3 animate-pulse">
-                <RefreshCw className="w-5 h-5 text-amber-400 animate-spin" />
-                <div className="text-xs">
-                  <p className="font-bold text-amber-200">Simulating Microclimate & Hydrodynamics...</p>
-                  <p className="text-[10px] text-stone-400 font-mono">Running soil moisture and transpiration equations</p>
-                </div>
-              </div>
-            )}
-
-            {/* Simulation Results (Screenshot 110601) */}
-            {selectedScenario && !isSimulating && (
-              <div className="p-4 rounded-2xl bg-stone-900/90 border-2 border-amber-800/80 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                {/* Result Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-stone-800">
-                  <div>
-                    <h4 className="text-xs font-bold text-amber-100">
-                      Simulation Results
-                    </h4>
-                    <p className="text-[10px] text-stone-400">
-                      Scenario: {selectedScenario.title} ({selectedScenario.subtitle})
-                    </p>
-                  </div>
-                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700/60">
-                    Illustrative example
+              {/* Agent Badge & Meta */}
+              {msg.role === 'assistant' && (
+                <div className="flex items-center justify-between mb-2 text-[10px] text-stone-400 pb-1.5 border-b border-amber-950/80">
+                  <span className="flex items-center space-x-1 text-amber-300 font-bold">
+                    <Sparkles className="w-3 h-3 text-amber-400" />
+                    <span>Agronomist Decision Engine</span>
+                  </span>
+                  <span className="font-mono bg-stone-950 px-1.5 py-0.5 rounded text-amber-400/90 border border-stone-800 flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
+                    <span>{msg.model || effectiveActiveModel.label}</span>
                   </span>
                 </div>
+              )}
 
-                {/* Metric Cards (Estimated yield change, Water demand) */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="p-3 rounded-xl bg-stone-950 border border-stone-800 space-y-0.5">
-                    <span className="text-[10px] text-stone-400 block">Estimated yield change</span>
-                    <span className={`text-2xl font-extrabold font-mono ${selectedScenario.yieldDeltaPct < 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                      {selectedScenario.yieldDelta}
-                    </span>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-stone-950 border border-stone-800 space-y-0.5">
-                    <span className="text-[10px] text-stone-400 block">Water demand</span>
-                    <span className="text-2xl font-extrabold font-mono text-sky-400">
-                      {selectedScenario.waterDemand}
-                    </span>
-                  </div>
-                </div>
-
-                {/* What the model predicts */}
-                <div className="space-y-1">
-                  <h5 className="text-[11px] font-bold text-amber-200">
-                    What the model predicts
-                  </h5>
-                  <p className="text-[11px] text-stone-300 leading-relaxed bg-stone-950/60 p-2.5 rounded-lg border border-stone-800">
-                    {selectedScenario.predictSummary}
-                  </p>
-                </div>
-
-                {/* Suggested actions */}
-                <div className="space-y-2">
-                  <h5 className="text-[11px] font-bold text-amber-200">
-                    Suggested actions
-                  </h5>
-                  <div className="space-y-1.5">
-                    {selectedScenario.actions.map((act, i) => (
-                      <div key={i} className="flex items-start space-x-2 text-[11px] text-stone-300">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <strong className="text-stone-200 block">{act.title}</strong>
-                          <span className="text-stone-400 text-[10px]">{act.desc}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* THE KILLER FEATURE: COMPARE WITH CURRENT PLAN */}
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowComparisonModal(true)}
-                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-stone-950 font-extrabold text-xs tracking-wide shadow-lg flex items-center justify-center space-x-2 transition-all active:scale-95"
-                  >
-                    <Columns className="w-4 h-4 text-stone-950" />
-                    <span>Compare with current plan</span>
-                  </button>
-                  <p className="text-[9px] text-center text-stone-500 mt-1.5">
-                    Shows original farm beside simulated version, highlighting affected plots.
-                  </p>
-                </div>
+              {/* Message Body */}
+              <div className="leading-relaxed text-stone-200">
+                {msg.role === 'assistant' ? (
+                  <FormattedMessage content={msg.content} />
+                ) : (
+                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                )}
               </div>
-            )}
-          </div>
-        )}
 
-        {/* ======================================================== */}
-        {/* VIEW 2: MULTI-TURN CONVERSATIONAL CHAT */}
-        {/* ======================================================== */}
-        {activeTab === 'chat' && (
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex flex-col space-y-1.5 ${
-                  msg.role === 'user' ? 'items-end' : 'items-start'
-                }`}
-              >
-                <div
-                  className={`max-w-[90%] rounded-2xl p-3.5 ${
-                    msg.role === 'user'
-                      ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-stone-50 rounded-tr-sm shadow-md border border-amber-500/50'
-                      : msg.isError
-                      ? 'bg-red-950/90 border border-red-800 text-red-200 rounded-tl-sm'
-                      : 'bg-stone-900/95 border-2 border-amber-950/90 text-stone-200 rounded-tl-sm shadow-lg'
-                  }`}
-                >
-                  {/* Agent Badge & Meta */}
-                  {msg.role === 'assistant' && (
-                    <div className="flex items-center justify-between mb-2 text-[10px] text-stone-400 pb-1.5 border-b border-amber-950/80">
-                      <span className="flex items-center space-x-1 text-amber-300 font-bold">
-                        <Sparkles className="w-3 h-3 text-amber-400" />
-                        <span>Agronomist Decision Engine</span>
-                      </span>
-                      {msg.model && (
-                        <span className="font-mono bg-stone-950 px-1.5 py-0.5 rounded text-amber-400/80 border border-stone-800">
-                          {msg.model}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Message Body */}
-                  <div className="leading-relaxed text-stone-200">
-                    <FormattedChatMessage content={msg.content} />
+              {/* Multi-step Execution Steps Accordion */}
+              {msg.steps && msg.steps.length > 0 && (
+                <div className="mt-3 pt-2.5 border-t border-amber-950/80 space-y-2">
+                  <div className="text-[10px] uppercase tracking-wider font-mono text-amber-400/80 flex items-center space-x-1">
+                    <Terminal className="w-3 h-3" />
+                    <span>Simulation Trace Steps ({msg.steps.length})</span>
                   </div>
 
-                  {/* Multi-step Execution Steps Accordion */}
-                  {msg.steps && msg.steps.length > 0 && (
-                    <div className="mt-3 pt-2.5 border-t border-amber-950/80 space-y-2">
-                      <div className="text-[10px] uppercase tracking-wider font-mono text-amber-400/80 flex items-center space-x-1">
-                        <Terminal className="w-3 h-3" />
-                        <span>Simulation Trace Steps ({msg.steps.length})</span>
-                      </div>
+                  {msg.steps.map((step, idx) => {
+                    const stepKey = `${msg.id}-step-${idx}`;
+                    const isExpanded = expandedSteps[stepKey];
 
-                      {msg.steps.map((step, idx) => {
-                        const stepKey = `${msg.id}-step-${idx}`;
-                        const isExpanded = expandedSteps[stepKey];
+                    return (
+                      <div
+                        key={stepKey}
+                        className="rounded-lg bg-stone-950/80 border border-amber-950 overflow-hidden text-[11px]"
+                      >
+                        <button
+                          onClick={() => toggleStepAccordion(stepKey)}
+                          className="w-full px-2.5 py-1.5 flex items-center justify-between text-left hover:bg-stone-800/50 transition-colors"
+                        >
+                          <div className="flex items-center space-x-1.5">
+                            {isExpanded ? (
+                              <ChevronDown className="w-3.5 h-3.5 text-stone-400" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+                            )}
+                            <span className="font-mono text-stone-300">
+                              Step {step.step_num}: {step.tool_calls?.map((tc) => tc.name).join(', ') || 'Reasoning'}
+                            </span>
+                          </div>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                        </button>
 
-                        return (
-                          <div
-                            key={stepKey}
-                            className="rounded-lg bg-stone-950/80 border border-amber-950 overflow-hidden text-[11px]"
-                          >
-                            <button
-                              onClick={() => toggleStepAccordion(stepKey)}
-                              className="w-full px-2.5 py-1.5 flex items-center justify-between text-left hover:bg-stone-800/50 transition-colors"
-                            >
-                              <div className="flex items-center space-x-1.5">
-                                {isExpanded ? (
-                                  <ChevronDown className="w-3.5 h-3.5 text-stone-400" />
-                                ) : (
-                                  <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
-                                )}
-                                <span className="font-mono text-stone-300">
-                                  Step {step.step_num || idx + 1}: {step.action || 'Agronomic Analysis'}
-                                </span>
+                        {isExpanded && (
+                          <div className="p-2.5 border-t border-stone-800 bg-stone-900/40 space-y-2 font-mono text-[10px]">
+                            {step.thought && (
+                              <div className="text-stone-400 italic">
+                                <span className="text-stone-500 font-sans">Thought: </span>
+                                {step.thought}
                               </div>
-                              <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
-                            </button>
+                            )}
 
-                            {isExpanded && (
-                              <div className="p-2.5 border-t border-stone-800 bg-stone-900/40 space-y-2 font-mono text-[10px]">
-                                {step.thought && (
-                                  <div className="text-stone-400 italic">
-                                    <span className="text-stone-500 font-sans">Thought: </span>
-                                    {step.thought}
+                            {step.tool_calls?.map((tc, tcIdx) => (
+                              <div key={tcIdx} className="bg-stone-950 p-2 rounded border border-stone-800">
+                                <div className="text-amber-400 font-semibold">
+                                  tool: {tc.name}
+                                </div>
+                                <div className="text-stone-400">
+                                  args: {JSON.stringify(tc.arguments)}
+                                </div>
+                                {step.tool_results?.[tcIdx] && (
+                                  <div className="text-stone-500 mt-1 truncate">
+                                    result: {JSON.stringify(step.tool_results[tcIdx])}
                                   </div>
                                 )}
                               </div>
-                            )}
+                            ))}
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-
-                <span className="text-[10px] text-stone-500 px-1 font-mono">
-                  {msg.timestamp}
-                </span>
-              </div>
-            ))}
-
-            {isLoading && (
-              <div className="flex items-start space-x-2 text-stone-300 bg-stone-900/90 p-3 rounded-xl border border-amber-950 w-fit">
-                <RefreshCw className="w-4 h-4 text-amber-400 animate-spin mt-0.5" />
-                <div className="space-y-0.5 text-xs">
-                  <p className="font-semibold text-amber-200">Evaluating Digital Twin What-If Scenario...</p>
-                  <p className="text-[10px] text-stone-400 font-mono">
-                    Computing agronomy metrics and farm recommendations
-                  </p>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
+              )}
+            </div>
+            <span className="text-[10px] text-stone-500 px-2 font-mono">{msg.timestamp}</span>
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex items-center space-x-2 text-stone-400 bg-stone-900/80 p-3 rounded-2xl border border-amber-950/80 w-fit">
+            <RefreshCw className="w-4 h-4 text-amber-400 animate-spin" />
+            <span className="font-mono text-[11px]">Reasoning with farm world state...</span>
           </div>
         )}
-
-        {/* Input Box (Always accessible at bottom) */}
-        <div className="p-3.5 border-t border-amber-950 bg-stone-950/90 flex-shrink-0">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend();
-            }}
-            className="flex items-center space-x-2"
-          >
-            <input
-              type="text"
-              value={inputPrompt}
-              onChange={(e) => setInputPrompt(e.target.value)}
-              placeholder="Ask custom question (drought, soil, crop yields)..."
-              disabled={isLoading}
-              className="flex-1 bg-stone-900 border border-amber-950 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-xs text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 disabled:opacity-50"
-            />
-            <button
-              type="submit"
-              disabled={!inputPrompt.trim() || isLoading}
-              className="p-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-stone-950 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md flex-shrink-0"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </form>
-        </div>
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Scenario Comparison Modal */}
-      <ScenarioComparisonModal
-        isOpen={showComparisonModal}
-        onClose={() => setShowComparisonModal(false)}
-        scenarioData={selectedScenario}
-      />
-    </>
+      {/* Active AI Model Live Indication Bar */}
+      <div className="px-3.5 py-1.5 bg-stone-900/90 border-t border-amber-950/80 flex items-center justify-between text-[11px] select-none">
+        <div className="flex items-center space-x-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span className="text-stone-400 font-medium">Active AI Model:</span>
+          <span className="font-mono font-bold text-emerald-300 bg-stone-950 px-2 py-0.5 rounded border border-emerald-700/60 shadow-inner">
+            {effectiveActiveModel.label}
+          </span>
+          <span className="text-[10px] text-stone-500 font-mono hidden sm:inline">
+            ({effectiveActiveModel.providerLabel})
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowConfig(!showConfig)}
+          className="text-[10px] font-semibold text-amber-400 hover:text-amber-300 underline underline-offset-2 flex items-center space-x-1"
+        >
+          <span>{showConfig ? 'Hide Settings' : 'Switch Model ▾'}</span>
+        </button>
+      </div>
+
+      {/* Input Form Footer */}
+      <div className="p-3 border-t border-stone-800 bg-stone-950">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSend();
+          }}
+          className="flex items-center space-x-2"
+        >
+          <input
+            type="text"
+            value={inputPrompt}
+            onChange={(e) => setInputPrompt(e.target.value)}
+            placeholder="Ask about crops, soil water, or what-if scenarios..."
+            disabled={isLoading}
+            className="flex-1 bg-stone-900 border border-amber-950/80 rounded-xl px-3.5 py-2.5 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-600/80 transition-colors disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={!inputPrompt.trim() || isLoading}
+            className="p-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-700 text-stone-950 font-bold hover:from-amber-400 hover:to-amber-600 border border-amber-400/80 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
+            title="Send Message"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
+      </div>
+    </div>
   );
 };

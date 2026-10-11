@@ -1,4 +1,4 @@
-import React, { createContext, useReducer, useMemo, useCallback, useEffect } from 'react';
+import React, { createContext, useReducer, useMemo, useCallback, useEffect, useState } from 'react';
 import { farmReducer, INITIAL_STATE, ACTION_TYPES, getInitialFarmItems } from './farmReducer';
 import { GRID_SIZE, ITEM_TYPES } from '../types/farm';
 import { DEFAULT_PRESET_FARM, PRESET_FARMS } from '../types/presetFarm';
@@ -15,6 +15,128 @@ export const FarmProvider = ({ children }) => {
       nextZIndex: initialItems.length + 1,
     };
   });
+
+  // AI Model & Provider Configuration
+  const [aiProvider, setAiProviderState] = useState(() => {
+    return typeof window !== 'undefined'
+      ? localStorage.getItem('GREENTWIN_AI_PROVIDER') || localStorage.getItem('DIGIFARM_AI_PROVIDER') || 'auto'
+      : 'auto';
+  });
+  const [geminiModel, setGeminiModelState] = useState(() => {
+    return typeof window !== 'undefined'
+      ? localStorage.getItem('GREENTWIN_GEMINI_MODEL') || localStorage.getItem('DIGIFARM_GEMINI_MODEL') || 'gemini-2.5-flash'
+      : 'gemini-2.5-flash';
+  });
+  const [localModel, setLocalModelState] = useState(() => {
+    return typeof window !== 'undefined'
+      ? localStorage.getItem('GREENTWIN_LOCAL_MODEL') || 'llama3.2:1b'
+      : 'llama3.2:1b';
+  });
+  const [geminiApiKey, setGeminiApiKeyState] = useState(() => {
+    return typeof window !== 'undefined'
+      ? localStorage.getItem('GREENTWIN_GEMINI_KEY') || localStorage.getItem('DIGIFARM_GEMINI_KEY') || ''
+      : '';
+  });
+
+  const setAiProvider = useCallback((prov) => {
+    setAiProviderState(prov);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('GREENTWIN_AI_PROVIDER', prov);
+    }
+  }, []);
+
+  const setGeminiModel = useCallback((model) => {
+    setGeminiModelState(model);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('GREENTWIN_GEMINI_MODEL', model);
+    }
+  }, []);
+
+  const setLocalModel = useCallback((model) => {
+    setLocalModelState(model);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('GREENTWIN_LOCAL_MODEL', model);
+    }
+  }, []);
+
+  const setGeminiApiKey = useCallback((key) => {
+    setGeminiApiKeyState(key);
+    if (typeof window !== 'undefined') {
+      if (key.trim()) {
+        localStorage.setItem('GREENTWIN_GEMINI_KEY', key.trim());
+      } else {
+        localStorage.removeItem('GREENTWIN_GEMINI_KEY');
+        localStorage.removeItem('DIGIFARM_GEMINI_KEY');
+      }
+    }
+  }, []);
+
+  const activeAiModel = useMemo(() => {
+    let effectiveProvider = aiProvider;
+    let modelName = localModel;
+    let label = 'Llama 3.2 (1B)';
+    let shortLabel = 'Llama 3.2';
+    let providerLabel = 'Local Ollama';
+    let isLocal = true;
+
+    if (aiProvider === 'gemini') {
+      effectiveProvider = 'gemini';
+      modelName = geminiModel;
+      label = geminiModel.replace('gemini-', 'Gemini ');
+      shortLabel = geminiModel.replace('gemini-', 'Gemini ').replace('-flash', '');
+      providerLabel = 'Google Gemini';
+      isLocal = false;
+    } else if (aiProvider === 'auto') {
+      if (geminiApiKey && geminiApiKey.trim()) {
+        effectiveProvider = 'gemini';
+        modelName = geminiModel;
+        label = `${geminiModel.replace('gemini-', 'Gemini ')} (Auto)`;
+        shortLabel = geminiModel.replace('gemini-', 'Gemini ').replace('-flash', '');
+        providerLabel = 'Google Gemini (Auto)';
+        isLocal = false;
+      } else {
+        effectiveProvider = 'ollama';
+        modelName = localModel;
+        if (localModel.includes('1b') || localModel.includes('3.2')) {
+          label = 'Llama 3.2 (1B)';
+          shortLabel = 'Llama 3.2';
+        } else if (localModel.includes('qwen')) {
+          label = 'Qwen 3.5';
+          shortLabel = 'Qwen 3.5';
+        } else {
+          label = localModel;
+          shortLabel = localModel.split(':')[0];
+        }
+        providerLabel = 'Local Ollama (Auto)';
+        isLocal = true;
+      }
+    } else {
+      effectiveProvider = 'ollama';
+      modelName = localModel;
+      if (localModel.includes('1b') || localModel.includes('3.2')) {
+        label = 'Llama 3.2 (1B)';
+        shortLabel = 'Llama 3.2';
+      } else if (localModel.includes('qwen')) {
+        label = 'Qwen 3.5';
+        shortLabel = 'Qwen 3.5';
+      } else {
+        label = localModel;
+        shortLabel = localModel.split(':')[0];
+      }
+      providerLabel = 'Local Ollama';
+      isLocal = true;
+    }
+
+    return {
+      provider: aiProvider,
+      effectiveProvider,
+      model: modelName,
+      label,
+      shortLabel,
+      providerLabel,
+      isLocal,
+    };
+  }, [aiProvider, geminiModel, localModel, geminiApiKey]);
 
   // Canvas Action Callbacks
   const addItem = useCallback((item) => {
@@ -985,6 +1107,16 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     sendAgentChat,
     saveFarmSnapshot,
     updateFarmProfile,
+    // AI Configuration and Active Model
+    aiProvider,
+    setAiProvider,
+    geminiModel,
+    setGeminiModel,
+    localModel,
+    setLocalModel,
+    geminiApiKey,
+    setGeminiApiKey,
+    activeAiModel,
   }), [
     state,
     selectedItem,
@@ -1015,6 +1147,15 @@ Answer the user's questions clearly, concisely, and with expert agronomy and sim
     sendAgentChat,
     saveFarmSnapshot,
     updateFarmProfile,
+    aiProvider,
+    setAiProvider,
+    geminiModel,
+    setGeminiModel,
+    localModel,
+    setLocalModel,
+    geminiApiKey,
+    setGeminiApiKey,
+    activeAiModel,
   ]);
 
   return <FarmContext.Provider value={value}>{children}</FarmContext.Provider>;
