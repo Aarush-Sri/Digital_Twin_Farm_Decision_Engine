@@ -10,7 +10,13 @@ logger = logging.getLogger(__name__)
 class GeminiProvider(BaseLLMProvider):
     """Google Gemini API Provider with function calling and search grounding support."""
 
-    FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+    FALLBACK_MODELS = [
+        "gemini-3.5-flash-lite",
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.5-flash",
+        "gemini-flash-latest",
+    ]
 
     def __init__(
         self,
@@ -18,7 +24,7 @@ class GeminiProvider(BaseLLMProvider):
         model: Optional[str] = None,
         enable_search: Optional[bool] = None,
     ):
-        self.api_key = api_key or settings.GEMINI_API_KEY
+        self.api_key = api_key if api_key is not None else settings.GEMINI_API_KEY
         self.model = model or settings.GEMINI_MODEL
         self.enable_search = enable_search if enable_search is not None else settings.ENABLE_GOOGLE_SEARCH
         self._client = None
@@ -31,6 +37,95 @@ class GeminiProvider(BaseLLMProvider):
 
     def is_configured(self) -> bool:
         return bool(self.api_key and self.api_key.strip())
+
+    async def verify_connection(
+        self,
+        model: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Lightweight probe to test whether API key and selected model are valid and reachable."""
+        target_model = model or self.model
+        if not self.is_configured():
+            return {
+                "valid": False,
+                "error_type": "missing_key",
+                "message": "Gemini API key is not configured. Provide an API key starting with 'AIzaSy...'.",
+                "model": target_model,
+                "supported_models": settings.SUPPORTED_GEMINI_MODELS,
+            }
+
+        import time
+        start_time = time.time()
+
+        try:
+            if not self._client:
+                from google import genai
+                self._client = genai.Client(api_key=self.api_key)
+
+            res = self._client.models.generate_content(
+                model=target_model,
+                contents="Respond with 'OK'",
+            )
+            latency_ms = int((time.time() - start_time) * 1000)
+            reply_preview = res.text.strip() if res.text else "OK"
+            return {
+                "valid": True,
+                "model": target_model,
+                "latency_ms": latency_ms,
+                "message": f"Successfully connected to Google Gemini ({target_model}) in {latency_ms}ms.",
+                "reply_preview": reply_preview,
+                "supported_models": settings.SUPPORTED_GEMINI_MODELS,
+            }
+        except Exception as e:
+            err_str = str(e)
+            latency_ms = int((time.time() - start_time) * 1000)
+            if "401" in err_str or "UNAUTHENTICATED" in err_str or "ACCESS_TOKEN_TYPE_UNSUPPORTED" in err_str:
+                return {
+                    "valid": False,
+                    "error_type": "unauthenticated",
+                    "message": "Invalid API key (HTTP 401). Google AI Studio keys start with 'AIzaSy...'. Get one free at https://aistudio.google.com/app/apikey",
+                    "model": target_model,
+                    "latency_ms": latency_ms,
+                    "supported_models": settings.SUPPORTED_GEMINI_MODELS,
+                }
+            elif "404" in err_str or "NOT_FOUND" in err_str or "not found" in err_str.lower():
+                return {
+                    "valid": False,
+                    "error_type": "model_not_found",
+                    "message": f"Model '{target_model}' was not found. Try 'gemini-2.0-flash' or 'gemini-1.5-flash'.",
+                    "model": target_model,
+                    "latency_ms": latency_ms,
+                    "supported_models": settings.SUPPORTED_GEMINI_MODELS,
+                }
+            elif "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
+                return {
+                    "valid": False,
+                    "error_type": "rate_limited",
+                    "message": f"Gemini quota exceeded or rate limit reached (HTTP 429) for model '{target_model}'.",
+                    "model": target_model,
+                    "latency_ms": latency_ms,
+                    "supported_models": settings.SUPPORTED_GEMINI_MODELS,
+                }
+            else:
+                return {
+                    "valid": False,
+                    "error_type": "general_error",
+                    "message": f"Gemini connection failed: {err_str}",
+                    "model": target_model,
+                    "latency_ms": latency_ms,
+                    "supported_models": settings.SUPPORTED_GEMINI_MODELS,
+                }
+
+    async def test_multiple_models(
+        self,
+        models: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Tests multiple models to check availability and compare latency across different models."""
+        target_models = models or settings.SUPPORTED_GEMINI_MODELS
+        results = []
+        for m in target_models:
+            res = await self.verify_connection(model=m)
+            results.append(res)
+        return results
 
     async def generate_response(
         self,
@@ -80,12 +175,13 @@ class GeminiProvider(BaseLLMProvider):
                     parts.append(types.Part.from_text(text=msg.content))
                 if msg.tool_calls:
                     for tc in msg.tool_calls:
-                        parts.append(
-                            types.Part.from_function_call(
-                                name=tc.name,
-                                args=tc.arguments,
-                            )
+                        p = types.Part.from_function_call(
+                            name=tc.name,
+                            args=tc.arguments,
                         )
+                        if getattr(tc, "thought_signature", None):
+                            p.thought_signature = tc.thought_signature
+                        parts.append(p)
                 contents.append(types.Content(role="model", parts=parts))
             elif msg.role == "tool":
                 response_data = {}
@@ -129,6 +225,13 @@ class GeminiProvider(BaseLLMProvider):
                 break
             except Exception as e:
                 last_err = e
+                err_str = str(e)
+                # Fail fast immediately on authentication errors
+                if "401" in err_str or "UNAUTHENTICATED" in err_str or "ACCESS_TOKEN_TYPE_UNSUPPORTED" in err_str:
+                    raise ValueError(
+                        "Invalid Gemini API Key: Request returned HTTP 401 UNAUTHENTICATED. "
+                        "Please verify your Google AI Studio API key (starts with 'AIzaSy...') at https://aistudio.google.com/app/apikey"
+                    ) from e
                 logger.warning(f"Gemini call with model '{target_model}' failed: {e}. Trying fallback if available...")
 
         if response is None:
@@ -149,6 +252,7 @@ class GeminiProvider(BaseLLMProvider):
                                 id=f"call_{fc.name}",
                                 name=fc.name,
                                 arguments=args,
+                                thought_signature=getattr(part, "thought_signature", None),
                             )
                         )
                     elif part.text:

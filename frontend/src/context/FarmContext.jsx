@@ -22,10 +22,27 @@ export const FarmProvider = ({ children }) => {
       ? localStorage.getItem('GREENTWIN_AI_PROVIDER') || localStorage.getItem('DIGIFARM_AI_PROVIDER') || 'auto'
       : 'auto';
   });
-  const [geminiModel, setGeminiModelState] = useState(() => {
+  const [openaiModel, setOpenAIModelState] = useState(() => {
     return typeof window !== 'undefined'
-      ? localStorage.getItem('GREENTWIN_GEMINI_MODEL') || localStorage.getItem('DIGIFARM_GEMINI_MODEL') || 'gemini-2.5-flash'
-      : 'gemini-2.5-flash';
+      ? localStorage.getItem('GREENTWIN_OPENAI_MODEL') || 'gpt-4o-mini'
+      : 'gpt-4o-mini';
+  });
+  const [openaiApiKey, setOpenAIApiKeyState] = useState(() => {
+    return typeof window !== 'undefined'
+      ? localStorage.getItem('GREENTWIN_OPENAI_KEY') || ''
+      : '';
+  });
+  const [geminiModel, setGeminiModelState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('GREENTWIN_GEMINI_MODEL') || localStorage.getItem('DIGIFARM_GEMINI_MODEL');
+      if (saved && !['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'].includes(saved)) return saved;
+    }
+    return 'gemini-3.7-flash';
+  });
+  const [geminiSearchEnabled, setGeminiSearchEnabledState] = useState(() => {
+    return typeof window !== 'undefined'
+      ? localStorage.getItem('GREENTWIN_GEMINI_SEARCH') !== 'false'
+      : true;
   });
   const [localModel, setLocalModelState] = useState(() => {
     return typeof window !== 'undefined'
@@ -45,10 +62,35 @@ export const FarmProvider = ({ children }) => {
     }
   }, []);
 
+  const setOpenAIModel = useCallback((model) => {
+    setOpenAIModelState(model);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('GREENTWIN_OPENAI_MODEL', model);
+    }
+  }, []);
+
+  const setOpenAIApiKey = useCallback((key) => {
+    setOpenAIApiKeyState(key);
+    if (typeof window !== 'undefined') {
+      if (key.trim()) {
+        localStorage.setItem('GREENTWIN_OPENAI_KEY', key.trim());
+      } else {
+        localStorage.removeItem('GREENTWIN_OPENAI_KEY');
+      }
+    }
+  }, []);
+
   const setGeminiModel = useCallback((model) => {
     setGeminiModelState(model);
     if (typeof window !== 'undefined') {
       localStorage.setItem('GREENTWIN_GEMINI_MODEL', model);
+    }
+  }, []);
+
+  const setGeminiSearchEnabled = useCallback((enabled) => {
+    setGeminiSearchEnabledState(enabled);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('GREENTWIN_GEMINI_SEARCH', String(enabled));
     }
   }, []);
 
@@ -79,7 +121,14 @@ export const FarmProvider = ({ children }) => {
     let providerLabel = 'Local Ollama';
     let isLocal = true;
 
-    if (aiProvider === 'gemini') {
+    if (aiProvider === 'openai') {
+      effectiveProvider = 'openai';
+      modelName = openaiModel;
+      label = openaiModel === 'gpt-4o-mini' ? 'GPT-4o mini' : openaiModel === 'gpt-4o' ? 'GPT-4o' : openaiModel;
+      shortLabel = openaiModel === 'gpt-4o-mini' ? 'GPT-4o mini' : openaiModel === 'gpt-4o' ? 'GPT-4o' : openaiModel;
+      providerLabel = 'OpenAI GPT';
+      isLocal = false;
+    } else if (aiProvider === 'gemini') {
       effectiveProvider = 'gemini';
       modelName = geminiModel;
       label = geminiModel.replace('gemini-', 'Gemini ');
@@ -87,7 +136,14 @@ export const FarmProvider = ({ children }) => {
       providerLabel = 'Google Gemini';
       isLocal = false;
     } else if (aiProvider === 'auto') {
-      if (geminiApiKey && geminiApiKey.trim()) {
+      if (openaiApiKey && openaiApiKey.trim()) {
+        effectiveProvider = 'openai';
+        modelName = openaiModel;
+        label = `${openaiModel === 'gpt-4o-mini' ? 'GPT-4o mini' : openaiModel === 'gpt-4o' ? 'GPT-4o' : openaiModel} (Auto)`;
+        shortLabel = openaiModel === 'gpt-4o-mini' ? 'GPT-4o mini' : openaiModel === 'gpt-4o' ? 'GPT-4o' : openaiModel;
+        providerLabel = 'OpenAI GPT (Auto)';
+        isLocal = false;
+      } else if (geminiApiKey && geminiApiKey.trim()) {
         effectiveProvider = 'gemini';
         modelName = geminiModel;
         label = `${geminiModel.replace('gemini-', 'Gemini ')} (Auto)`;
@@ -97,7 +153,10 @@ export const FarmProvider = ({ children }) => {
       } else {
         effectiveProvider = 'ollama';
         modelName = localModel;
-        if (localModel.includes('1b') || localModel.includes('3.2')) {
+        if (localModel.includes('phi4') || localModel.includes('phi-4')) {
+          label = 'Phi-4 Mini';
+          shortLabel = 'Phi-4 Mini';
+        } else if (localModel.includes('1b') || localModel.includes('3.2')) {
           label = 'Llama 3.2 (1B)';
           shortLabel = 'Llama 3.2';
         } else if (localModel.includes('qwen')) {
@@ -113,7 +172,10 @@ export const FarmProvider = ({ children }) => {
     } else {
       effectiveProvider = 'ollama';
       modelName = localModel;
-      if (localModel.includes('1b') || localModel.includes('3.2')) {
+      if (localModel.includes('phi4') || localModel.includes('phi-4')) {
+        label = 'Phi-4 Mini';
+        shortLabel = 'Phi-4 Mini';
+      } else if (localModel.includes('1b') || localModel.includes('3.2')) {
         label = 'Llama 3.2 (1B)';
         shortLabel = 'Llama 3.2';
       } else if (localModel.includes('qwen')) {
@@ -136,7 +198,7 @@ export const FarmProvider = ({ children }) => {
       providerLabel,
       isLocal,
     };
-  }, [aiProvider, geminiModel, localModel, geminiApiKey]);
+  }, [aiProvider, openaiModel, openaiApiKey, geminiModel, localModel, geminiApiKey]);
 
   // Canvas Action Callbacks
   const addItem = useCallback((item) => {
@@ -321,8 +383,8 @@ export const FarmProvider = ({ children }) => {
     try {
       await apiClient.checkHealth();
       
-      // Create or get active farm session
-      const createRes = await apiClient.createFarm('GreenTwin Model Farm', 10, 10);
+      // Create or get active farm session with 25x15 grid matching the 1000px x 600px canvas bounds
+      const createRes = await apiClient.createFarm('GreenTwin Model Farm', 25, 15);
       const farmId = createRes.farm_id;
       const world = createRes.world;
 
@@ -374,7 +436,11 @@ export const FarmProvider = ({ children }) => {
     dispatch({ type: ACTION_TYPES.SET_SYNCING, payload: { isSyncing: true } });
 
     try {
+      // Clear previous backend grid state so deleted/moved items don't leave phantom crops
+      await apiClient.clearFarm(state.farmId).catch((e) => console.warn('Clear farm before sync:', e));
+
       // Map canvas items to grid coordinates (40px = 1m = 1 tile)
+      // Matches backend CropType enum exactly
       const CROP_MAP = {
         [ITEM_TYPES.WHEAT]: 'wheat',
         [ITEM_TYPES.CARROT]: 'carrot',
@@ -383,9 +449,12 @@ export const FarmProvider = ({ children }) => {
         [ITEM_TYPES.PADDY]: 'wheat',
         [ITEM_TYPES.SUGARCANE]: 'corn',
         [ITEM_TYPES.BANANA]: 'soybean',
-        [ITEM_TYPES.PUMPKIN]: 'potato',
-        [ITEM_TYPES.STRAWBERRY]: 'lettuce',
+        [ITEM_TYPES.PUMPKIN]: 'pumpkin',
+        [ITEM_TYPES.STRAWBERRY]: 'strawberry',
       };
+
+      const maxGridX = (state.world?.width || 25) - 1;
+      const maxGridY = (state.world?.height || 15) - 1;
 
       for (const item of state.items) {
         const startX = Math.max(0, Math.floor(item.x / 40));
@@ -393,14 +462,22 @@ export const FarmProvider = ({ children }) => {
         const endX = Math.max(startX, Math.floor((item.x + item.width - 1) / 40));
         const endY = Math.max(startY, Math.floor((item.y + item.height - 1) / 40));
 
+        // Skip items positioned completely outside the simulation grid
+        if (startX > maxGridX || startY > maxGridY) continue;
+
+        const clampedStartX = Math.min(startX, maxGridX);
+        const clampedStartY = Math.min(startY, maxGridY);
+        const clampedEndX = Math.min(endX, maxGridX);
+        const clampedEndY = Math.min(endY, maxGridY);
+
         const backendCrop = CROP_MAP[item.type];
         if (backendCrop) {
           await apiClient.batchPlant(state.farmId, {
             cropType: backendCrop,
-            startX: Math.min(startX, 9),
-            startY: Math.min(startY, 9),
-            endX: Math.min(endX, 9),
-            endY: Math.min(endY, 9),
+            startX: clampedStartX,
+            startY: clampedStartY,
+            endX: clampedEndX,
+            endY: clampedEndY,
           });
         } else if (
           item.type === ITEM_TYPES.WATER || 
@@ -413,8 +490,8 @@ export const FarmProvider = ({ children }) => {
           const rateMm = isSprinkler ? 10.0 : 8.0;
           const irrType = isSprinkler ? 'sprinkler' : 'drip';
 
-          for (let x = Math.min(startX, 9); x <= Math.min(endX, 9); x++) {
-            for (let y = Math.min(startY, 9); y <= Math.min(endY, 9); y++) {
+          for (let x = clampedStartX; x <= clampedEndX; x++) {
+            for (let y = clampedStartY; y <= clampedEndY; y++) {
               await apiClient.updateTile(state.farmId, {
                 x,
                 y,
@@ -762,21 +839,35 @@ export const FarmProvider = ({ children }) => {
    * Direct Gemini API client in browser when API Key is provided
    */
   const callDirectGemini = async (apiKey, prompt, chatHistory) => {
-    const crops = state.items.filter((i) => i.type === ITEM_TYPES.WHEAT || i.type === ITEM_TYPES.CARROT);
-    const wheatCount = state.items.filter((i) => i.type === ITEM_TYPES.WHEAT).length;
-    const carrotCount = state.items.filter((i) => i.type === ITEM_TYPES.CARROT).length;
-    const waterCount = state.items.filter((i) => i.type === ITEM_TYPES.WATER).length;
-    const treeCount = state.items.filter((i) => i.type === ITEM_TYPES.TREE).length;
+    const ALL_CROP_TYPES = [
+      ITEM_TYPES.WHEAT, ITEM_TYPES.CARROT, ITEM_TYPES.TOMATO, ITEM_TYPES.CORN,
+      ITEM_TYPES.PADDY, ITEM_TYPES.SUGARCANE, ITEM_TYPES.BANANA,
+      ITEM_TYPES.PUMPKIN, ITEM_TYPES.STRAWBERRY,
+    ];
+    const cropTypeCounts = {};
+    state.items.forEach((item) => {
+      if (ALL_CROP_TYPES.includes(item.type)) {
+        cropTypeCounts[item.type] = (cropTypeCounts[item.type] || 0) + 1;
+      }
+    });
+    const totalCropsCount = Object.values(cropTypeCounts).reduce((a, b) => a + b, 0);
+    const cropSummaryStr = Object.entries(cropTypeCounts)
+      .map(([k, v]) => `${v}× ${k.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}`)
+      .join(', ') || 'No active crops planted (field is fallow)';
+
+    const waterCount = state.items.filter((i) => [ITEM_TYPES.WATER, ITEM_TYPES.POND, ITEM_TYPES.WELL, ITEM_TYPES.SPRINKLER, ITEM_TYPES.PIPE].includes(i.type)).length;
+    const treeCount = state.items.filter((i) => [ITEM_TYPES.TREE, ITEM_TYPES.NEEM_TREE, ITEM_TYPES.MANGO_TREE, ITEM_TYPES.COCONUT_TREE].includes(i.type)).length;
     const grassCount = state.items.filter((i) => i.type === ITEM_TYPES.GRASS).length;
     const fenceCount = state.items.filter((i) => i.type === ITEM_TYPES.FENCE).length;
 
     const farmContextStr = `Current Farm Plot Context:
 - Total Placed Assets: ${state.items.length}
-- Cultivated Crops: ${crops.length} (${wheatCount} Wheat plots, ${carrotCount} Carrot patches)
-- Irrigation Infrastructure: ${waterCount} Water Canals
-- Perimeter & Flora: ${treeCount} Orchard Trees, ${fenceCount} Wood Fences, ${grassCount} Grass Plots
+- Cultivated Crops: ${totalCropsCount} plots (${cropSummaryStr})
+- Irrigation Infrastructure: ${waterCount} Water Sources
+- Perimeter & Flora: ${treeCount} Trees, ${fenceCount} Wood Fences, ${grassCount} Grass Plots
 - Simulation Day: ${state.currentDay}
-- Ambient Weather: Temp avg 22°C, Solar Radiation 450 W/m², Reference ET0 4.2 mm/day`;
+- Ambient Weather: Temp avg 22°C, Solar Radiation 450 W/m², Reference ET0 4.2 mm/day
+- [GROUNDING RULE]: ONLY the crops listed above exist on this farm. Do NOT invent, assume, or project yields for unplanted crops (e.g. no potato, lettuce, etc.).`;
 
     const systemInstruction = `You are GreenTwin's AI Agronomist and Digital Farmland Twin reasoning engine.
 You have full access to the user's virtual farm layout.
@@ -785,8 +876,10 @@ ${farmContextStr}
 Instructions:
 - Be direct, concise, and strictly to the point.
 - Deliver the key answer in the very first 1-2 sentences. Avoid conversational greetings, pleasantries, or echoing the prompt back.
+- STRICT CROP GROUNDING: Analyze ONLY crops that are actively planted in the farm context above. If a crop (like potato or lettuce) is not planted, NEVER mention it.
+- RAINFALL & IRRIGATION RULE: Natural rainfall hydrates the soil. During or after rainfall events (e.g. good rain, 2 weeks of rain), recommend PAUSING or REDUCING irrigation (0 mm/day) to prevent waterlogging. NEVER recommend increasing irrigation during rainfall!
 - If providing recommendations, limit them to 2-3 short, high-impact bullet points.
-- Cite exact spatial metrics (e.g. plot coordinates in meters, soil moisture %, distance to water).`;
+- Cite exact metrics (e.g. soil moisture %, yield delta %, irrigation mm/day).`;
 
     const validHistory = (chatHistory || []).filter(
       (m) => m.content && m.content.trim() && m.id !== 'welcome'
@@ -818,7 +911,14 @@ Instructions:
       });
     }
 
-    const candidateModels = [model || 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    const candidateModels = [
+      model || 'gemini-3.5-flash-lite',
+      'gemini-3.5-flash-lite',
+      'gemini-3.7-flash',
+      'gemini-3.8-flash',
+      'gemini-3.5-flash',
+      'gemini-flash-latest',
+    ].filter((m, i, arr) => arr.indexOf(m) === i);
     let lastError = null;
 
     for (const mod of candidateModels) {
@@ -867,28 +967,35 @@ Instructions:
    * Direct Ollama client in browser when local Ollama daemon is running (Qwen 3.5 / 2.5)
    */
   const callDirectOllama = async (prompt, chatHistory, requestedModel = null) => {
-    const crops = state.items.filter((i) => 
-      i.type === ITEM_TYPES.WHEAT || 
-      i.type === ITEM_TYPES.CARROT || 
-      i.type === ITEM_TYPES.TOMATO || 
-      i.type === ITEM_TYPES.CORN || 
-      i.type === ITEM_TYPES.PUMPKIN || 
-      i.type === ITEM_TYPES.STRAWBERRY
-    );
-    const wheatCount = state.items.filter((i) => i.type === ITEM_TYPES.WHEAT).length;
-    const carrotCount = state.items.filter((i) => i.type === ITEM_TYPES.CARROT).length;
-    const waterCount = state.items.filter((i) => i.type === ITEM_TYPES.WATER || i.type === ITEM_TYPES.WELL).length;
-    const treeCount = state.items.filter((i) => i.type === ITEM_TYPES.TREE).length;
+    const ALL_CROP_TYPES = [
+      ITEM_TYPES.WHEAT, ITEM_TYPES.CARROT, ITEM_TYPES.TOMATO, ITEM_TYPES.CORN,
+      ITEM_TYPES.PADDY, ITEM_TYPES.SUGARCANE, ITEM_TYPES.BANANA,
+      ITEM_TYPES.PUMPKIN, ITEM_TYPES.STRAWBERRY,
+    ];
+    const cropTypeCounts = {};
+    state.items.forEach((item) => {
+      if (ALL_CROP_TYPES.includes(item.type)) {
+        cropTypeCounts[item.type] = (cropTypeCounts[item.type] || 0) + 1;
+      }
+    });
+    const totalCropsCount = Object.values(cropTypeCounts).reduce((a, b) => a + b, 0);
+    const cropSummaryStr = Object.entries(cropTypeCounts)
+      .map(([k, v]) => `${v}× ${k.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}`)
+      .join(', ') || 'No active crops planted (field is fallow)';
+
+    const waterCount = state.items.filter((i) => [ITEM_TYPES.WATER, ITEM_TYPES.POND, ITEM_TYPES.WELL, ITEM_TYPES.SPRINKLER, ITEM_TYPES.PIPE].includes(i.type)).length;
+    const treeCount = state.items.filter((i) => [ITEM_TYPES.TREE, ITEM_TYPES.NEEM_TREE, ITEM_TYPES.MANGO_TREE, ITEM_TYPES.COCONUT_TREE].includes(i.type)).length;
     const grassCount = state.items.filter((i) => i.type === ITEM_TYPES.GRASS).length;
     const fenceCount = state.items.filter((i) => i.type === ITEM_TYPES.FENCE).length;
 
     const farmContextStr = `Current Farm Plot Context:
 - Total Placed Assets: ${state.items.length}
-- Cultivated Crops: ${crops.length} (${wheatCount} Wheat, ${carrotCount} Carrot)
+- Cultivated Crops: ${totalCropsCount} plots (${cropSummaryStr})
 - Irrigation Infrastructure: ${waterCount} Water Canals/Wells
 - Perimeter & Flora: ${treeCount} Trees, ${fenceCount} Fences, ${grassCount} Grass Plots
 - Simulation Day: ${state.currentDay}
-- Ambient Weather: Temp avg 22°C, Solar Radiation 450 W/m², Reference ET0 4.2 mm/day`;
+- Ambient Weather: Temp avg 22°C, Solar Radiation 450 W/m², Reference ET0 4.2 mm/day
+- [GROUNDING RULE]: ONLY the crops listed above exist on this farm. Do NOT invent, assume, or project yields for unplanted crops (e.g. no potato, lettuce, etc.).`;
 
     const isSmallLocalModel = (requestedModel || '').includes('1b') || (requestedModel || '').includes('2b') || (requestedModel || '').includes('3.2');
     const systemInstruction = `You are GreenTwin's AI Agronomist and Digital Farmland Twin reasoning engine.
@@ -898,6 +1005,8 @@ ${farmContextStr}
 Instructions:
 - Be direct, concise, and strictly to the point.
 - Answer the user's question immediately in the very first sentence. Do NOT start with greetings, pleasantries, or preamble.
+- STRICT CROP GROUNDING: Analyze ONLY crops that are actively planted in the farm context above. If a crop (like potato or lettuce) is not planted, NEVER mention it or project yield for it.
+- RAINFALL & IRRIGATION RULE: Natural rainfall hydrates the soil. During or after rainfall events (e.g. good rain, 2 weeks of rain), recommend PAUSING or REDUCING irrigation (0 mm/day) to prevent waterlogging. NEVER recommend increasing irrigation during rainfall!
 - Keep the response short and actionable (maximum 2-3 crisp bullet points if recommending steps).
 - Always use concrete farm facts (e.g., crop types, meters from water, soil moisture %).`;
 
@@ -1043,12 +1152,18 @@ Instructions:
    * Send user prompt to Autonomous AI Agronomist Agent
    */
   const sendAgentChat = useCallback(async (prompt, chatHistory = [], maxSteps = 5, options = {}) => {
-    const { preferredProvider = 'auto', model = null, geminiApiKey: customKey = null } = options;
+    const { preferredProvider = 'auto', model = null, geminiApiKey: customKey = null, openaiApiKey: customOpenAIKey = null, openaiModel: customOpenAIModel = null } = options;
 
-    const storedKey = typeof window !== 'undefined'
+    const storedGeminiKey = typeof window !== 'undefined'
       ? (localStorage.getItem('GREENTWIN_GEMINI_KEY') || localStorage.getItem('DIGIFARM_GEMINI_KEY') || import.meta.env?.VITE_GEMINI_API_KEY)
       : null;
-    const effectiveGeminiKey = (customKey || storedKey || '').trim();
+    const effectiveGeminiKey = (customKey || storedGeminiKey || geminiApiKey || '').trim();
+
+    const storedOpenAIKey = typeof window !== 'undefined'
+      ? (localStorage.getItem('GREENTWIN_OPENAI_KEY') || import.meta.env?.VITE_OPENAI_API_KEY)
+      : null;
+    const effectiveOpenAIKey = (customOpenAIKey || storedOpenAIKey || openaiApiKey || '').trim();
+    const effectiveOpenAIModel = customOpenAIModel || openaiModel || 'gpt-4o-mini';
 
     // 1. If backend is connected, prioritize the full multi-step backend agent
     if (state.farmId && state.backendStatus === 'connected') {
@@ -1063,10 +1178,13 @@ Instructions:
           prompt,
           chatHistory,
           maxSteps,
+          openaiApiKey: effectiveOpenAIKey || null,
+          openaiModel: effectiveOpenAIModel,
           geminiApiKey: effectiveGeminiKey || null,
           model,
           preferredProvider,
           frontendFarmContext,
+          enableSearch: geminiSearchEnabled,
         });
 
         // Refresh farm state after agent execution
@@ -1247,8 +1365,14 @@ Instructions:
     updateFarmProfile,
     aiProvider,
     setAiProvider,
+    openaiModel,
+    setOpenAIModel,
+    openaiApiKey,
+    setOpenAIApiKey,
     geminiModel,
     setGeminiModel,
+    geminiSearchEnabled,
+    setGeminiSearchEnabled,
     localModel,
     setLocalModel,
     geminiApiKey,

@@ -14,6 +14,8 @@ class CropType(str, Enum):
     POTATO = "potato"
     CARROT = "carrot"
     COTTON = "cotton"
+    PUMPKIN = "pumpkin"
+    STRAWBERRY = "strawberry"
 
 
 class GrowthStage(str, Enum):

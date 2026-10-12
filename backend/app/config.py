@@ -28,8 +28,19 @@ class Settings(BaseModel):
 
     # Gemini
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
     ENABLE_GOOGLE_SEARCH: bool = os.getenv("ENABLE_GOOGLE_SEARCH", "true").lower() == "true"
+    SUPPORTED_GEMINI_MODELS: list[str] = [
+        "gemini-3.7-flash",
+        "gemini-flash-latest",
+        "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.8-flash",
+    ]
+
+    # OpenAI (GPT-4o, GPT-4o-mini)
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
     # Ollama Fallback (Default to Qwen 3.5 / 2.5)
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -47,3 +58,4 @@ class Settings(BaseModel):
 
 
 settings = Settings()
+# reload

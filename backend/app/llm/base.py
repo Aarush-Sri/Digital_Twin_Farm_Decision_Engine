@@ -14,6 +14,7 @@ class ToolCall(BaseModel):
     id: str = Field(default_factory=lambda: "call_default")
     name: str
     arguments: Dict[str, Any] = Field(default_factory=dict)
+    thought_signature: Optional[Any] = None
 
 
 class LLMMessage(BaseModel):

@@ -2,6 +2,7 @@
 from .base import BaseLLMProvider, LLMMessage, LLMResponse, ToolDefinition, ToolCall
 from .gemini_provider import GeminiProvider
 from .ollama_provider import OllamaProvider
+from .openai_provider import OpenAIProvider
 from .factory import FallbackLLMManager, get_llm_provider
 
 __all__ = [
@@ -12,6 +13,7 @@ __all__ = [
     "ToolCall",
     "GeminiProvider",
     "OllamaProvider",
+    "OpenAIProvider",
     "FallbackLLMManager",
     "get_llm_provider",
 ]

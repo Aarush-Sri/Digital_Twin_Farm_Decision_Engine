@@ -193,6 +193,29 @@ def batch_plant(farm_id: str, req: BatchPlantRequest):
     return {"status": "success", "planted_count": planted_count, "crop_type": req.crop_type.value}
 
 
+@router.post("/{farm_id}/clear", response_model=Dict[str, Any])
+def clear_farm(farm_id: str):
+    """Resets all tiles on the farm to fallow ground, removing active crops and irrigation."""
+    engine = session_store.get_engine(farm_id)
+    if not engine:
+        raise HTTPException(status_code=404, detail="Farm not found")
+
+    cleared_count = 0
+    for tile in engine.world.tiles:
+        tile.crop = None
+        tile.is_fallow = True
+        tile.irrigation_type = IrrigationType.NONE
+        tile.irrigation_rate_mm_per_day = 0.0
+        cleared_count += 1
+
+    return {
+        "status": "cleared",
+        "farm_id": farm_id,
+        "cleared_tiles": cleared_count,
+        "summary": engine.get_summary(),
+    }
+
+
 @router.post("/{farm_id}/save", response_model=Dict[str, Any])
 def save_farm_snapshot(farm_id: str):
     """Persists current farm state to database and snapshot storage."""

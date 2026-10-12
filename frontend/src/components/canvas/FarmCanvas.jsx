@@ -188,9 +188,12 @@ export const FarmCanvas = () => {
       const dropX = (e.clientX - rect.left + canvasRef.current.scrollLeft) / zoom;
       const dropY = (e.clientY - rect.top + canvasRef.current.scrollTop) / zoom;
 
+      const itemWidth = itemDef.width || itemDef.defaultWidth;
+      const itemHeight = itemDef.height || itemDef.defaultHeight;
+
       // Center the dropped item at mouse pointer
-      const rawX = dropX - itemDef.defaultWidth / 2;
-      const rawY = dropY - itemDef.defaultHeight / 2;
+      const rawX = dropX - itemWidth / 2;
+      const rawY = dropY - itemHeight / 2;
 
       const x = Math.max(0, snapCoordinate(rawX));
       const y = Math.max(0, snapCoordinate(rawY));
@@ -200,8 +203,8 @@ export const FarmCanvas = () => {
         type: itemDef.type,
         x,
         y,
-        width: itemDef.defaultWidth,
-        height: itemDef.defaultHeight,
+        width: itemWidth,
+        height: itemHeight,
         minWidth: itemDef.minWidth,
         minHeight: itemDef.minHeight,
         isPointIcon: Boolean(itemDef.isPointIcon),

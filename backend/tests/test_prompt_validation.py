@@ -3,6 +3,9 @@ import time
 import os
 import sys
 
+# Tell pytest not to collect this standalone validation script
+__test__ = False
+
 # Ensure backend root is on sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 

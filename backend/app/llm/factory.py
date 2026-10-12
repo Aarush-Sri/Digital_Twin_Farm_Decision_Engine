@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 from .base import BaseLLMProvider, LLMMessage, LLMResponse, ToolDefinition, ToolCall
 from .gemini_provider import GeminiProvider
 from .ollama_provider import OllamaProvider
+from .openai_provider import OpenAIProvider
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -163,18 +164,34 @@ class RuleBasedFallbackProvider(BaseLLMProvider):
                 f"2. Add perimeter windbreak trees to reduce convective boundary layer drying."
             )
 
-        # 2. SCENARIO: Flood / Overwatering / Excessive Rain
+        # 2. SCENARIO: Good Rainfall / Beneficial Precipitation
+        elif any(w in p for w in ["good rain", "rain for", "2 week", "weeks of rain", "beneficial rain"]) and not any(w in p for w in ["no rain", "drought"]):
+            boosted_yield = yield_kg * 1.15
+            crop_list_str = ", ".join([f"**{count}× {ctype.title()}**" for ctype, count in crops_dist.items()]) if has_crops else "No active crops"
+            return (
+                f"### 🌧️ Scenario Projection: 2 Weeks of Beneficial Rainfall (Day {current_day})\n\n"
+                f"**Projected Yield Delta:**\n"
+                f"- **Overall Farm Yield:** **+15% over baseline** (Projected biomass increases from **{yield_kg:.1f} kg** to **{boosted_yield:.1f} kg**).\n"
+                f"- **Active Planted Crops Benefiting:** {crop_list_str}.\n"
+                f"- *Root Zone Hydrology:* Continuous precipitation maintains soil moisture in the optimal field capacity band (60%–75%), maximizing transpiration and nutrient uptake without water stress.\n\n"
+                f"**Critical Irrigation & Agronomic Directives:**\n"
+                f"1. **Suspend Irrigation (0 mm/day):** Turn off all drip and sprinkler valves immediately. Natural precipitation fully satisfies crop water demand ($ET_c$); adding supplemental irrigation would risk root hypoxia, nitrogen leaching, and waterlogging.\n"
+                f"2. **Inspect Field Drainage:** Ensure perimeter runoff trenches are cleared to prevent standing pond water around active roots."
+            )
+
+        # 3. SCENARIO: Flood / Overwatering / Excessive Rain
         elif any(w in p for w in ["flood", "heavy rain", "too much water", "overwater", "storm", "saturat"]):
+            planted_vulnerability = ", ".join([ctype.title() for ctype in crops_dist.keys()]) if has_crops else "Active crops"
             return (
                 f"### 🌧️ Scenario Projection: Excessive Saturation & Flood (Day {current_day})\n\n"
                 f"**Soil Dynamics & Hypoxia:**\n"
                 f"- **Pore Saturation:** Moisture levels surge above `85%`, eliminating aerated soil macropores.\n"
                 f"- **Root Respiration:** Oxygen deprivation causes root tissue necrosis and nitrogen denitrification.\n\n"
                 f"**Crop Vulnerability:**\n"
-                f"- Carrots face root splitting and cavity spot; wheat suffers crown rot risk.\n\n"
+                f"- {planted_vulnerability} face root hypoxia and fungal rot risks if ponding persists.\n\n"
                 f"**Recommended Mitigations:**\n"
-                f"1. Construct perimeter grass drainage channels.\n"
-                f"2. Elevate crop seeding beds on 2×2m grid modules."
+                f"1. Construct perimeter grass drainage channels to divert excess surface runoff.\n"
+                f"2. Elevate crop seeding beds on 2×2m grid modules and suspend all irrigation."
             )
 
         # 3. SCENARIO: Crop Comparison & Suitability
@@ -241,17 +258,28 @@ class RuleBasedFallbackProvider(BaseLLMProvider):
 
 
 class FallbackLLMManager(BaseLLMProvider):
-    """Manages primary Gemini provider with automatic failover to Ollama (Qwen) and plot-aware rule-based fallback."""
+    """Manages OpenAI / Gemini providers with automatic failover to Ollama (Qwen) and plot-aware rule-based fallback."""
 
     def __init__(
         self,
         gemini_api_key: Optional[str] = None,
         gemini_model: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
+        openai_model: Optional[str] = None,
         ollama_model: Optional[str] = None,
         preferred_provider: Optional[str] = "auto",
+        gemini_enable_search: Optional[bool] = None,
     ):
-        active_key = (gemini_api_key or settings.GEMINI_API_KEY or "").strip()
-        self.gemini = GeminiProvider(api_key=active_key, model=gemini_model) if active_key else None
+        active_gemini_key = (gemini_api_key or settings.GEMINI_API_KEY or "").strip()
+        self.gemini = GeminiProvider(
+            api_key=active_gemini_key,
+            model=gemini_model,
+            enable_search=gemini_enable_search,
+        ) if active_gemini_key else None
+
+        active_openai_key = (openai_api_key or settings.OPENAI_API_KEY or "").strip()
+        self.openai = OpenAIProvider(api_key=active_openai_key, model=openai_model) if active_openai_key else None
+
         self.ollama = OllamaProvider(model=ollama_model or settings.OLLAMA_MODEL)
         self.fallback = RuleBasedFallbackProvider()
         self.preferred_provider = (preferred_provider or "auto").lower()
@@ -262,7 +290,58 @@ class FallbackLLMManager(BaseLLMProvider):
         tools: Optional[List[ToolDefinition]] = None,
         temperature: float = 0.2,
     ) -> LLMResponse:
-        # Route 1: Direct Ollama preference requested
+        # Route 0: Direct Fallback preference
+        if self.preferred_provider in ["fallback", "rule_based", "rules"]:
+            return await self.fallback.generate_response(messages, tools=tools, temperature=temperature)
+
+        # Route 1: Direct OpenAI preference requested
+        if self.preferred_provider == "openai":
+            if not self.openai or not self.openai.is_configured():
+                return LLMResponse(
+                    content=(
+                        "⚠️ **OpenAI API Key Missing**: You selected **OpenAI GPT**, but no API key was provided.\n\n"
+                        "Please open **Settings** in the AI drawer and paste your key (`sk-...`), or set `OPENAI_API_KEY=sk-...` in `backend/.env`."
+                    ),
+                    tool_calls=[],
+                    provider="openai",
+                    model="unconfigured",
+                )
+            try:
+                return await self.openai.generate_response(messages, tools=tools, temperature=temperature)
+            except Exception as e:
+                logger.error(f"OpenAI provider failed: {e}")
+                # Fallback to Gemini if configured so the user is not blocked
+                if self.gemini and self.gemini.is_configured():
+                    try:
+                        logger.warning(f"OpenAI failed ({e}), falling back to Google Gemini...")
+                        res = await self.gemini.generate_response(messages, tools=tools, temperature=temperature)
+                        res.content = (
+                            f"> ⚠️ **OpenAI Quota Exceeded (429)**: Your OpenAI API key has no remaining credits or hit a rate limit. "
+                            f"Automatically failed over to **Google Gemini ({self.gemini.model})** so your analysis continues.\n\n"
+                            + res.content
+                        )
+                        return res
+                    except Exception as ge:
+                        logger.warning(f"Gemini failover also failed: {ge}")
+                # Fallback to Ollama if reachable
+                try:
+                    res = await self.ollama.generate_response(messages, tools=tools, temperature=temperature)
+                    res.content = (
+                        f"> ⚠️ **OpenAI Quota Exceeded (429)**: Failed over to local **Ollama ({self.ollama.model})**.\n\n"
+                        + res.content
+                    )
+                    return res
+                except Exception:
+                    pass
+
+                return LLMResponse(
+                    content=f"⚠️ **OpenAI Error**: {str(e)}\n\n**Why this happens:** HTTP `429 Too Many Requests` indicates that your OpenAI account has run out of prepaid API credits (balance is $0.00) or hit a rate limit.\n\n**Solutions:**\n1. **Use Gemini (Free)**: Open **Settings** in the AI drawer top bar and switch Provider to **Google Gemini**.\n2. **Use Local Ollama**: Run `ollama run llama3.2` locally and select Ollama.\n3. **Add Credits**: Top up your account balance at https://platform.openai.com/billing.",
+                    tool_calls=[],
+                    provider="openai",
+                    model=self.openai.model,
+                )
+
+        # Route 2: Direct Ollama preference requested
         if self.preferred_provider == "ollama":
             try:
                 return await self.ollama.generate_response(messages, tools=tools, temperature=temperature)
@@ -270,32 +349,67 @@ class FallbackLLMManager(BaseLLMProvider):
                 logger.warning(f"Ollama provider failed: {e}. Falling back to Rule-Based Agent...")
             return await self.fallback.generate_response(messages, tools=tools, temperature=temperature)
 
-        # Route 2: Gemini preference or Auto mode
+        # Route 3: Direct Gemini preference
+        if self.preferred_provider == "gemini":
+            if not self.gemini or not self.gemini.is_configured():
+                return LLMResponse(
+                    content=(
+                        "⚠️ **Gemini API Key Missing**: You selected **Google Gemini**, but no API key was provided.\n\n"
+                        "Please open **Settings** in the AI drawer and paste your key (`AIzaSy...`), or set `GEMINI_API_KEY` in `backend/.env`."
+                    ),
+                    tool_calls=[],
+                    provider="gemini",
+                    model="unconfigured",
+                )
+            try:
+                return await self.gemini.generate_response(messages, tools=tools, temperature=temperature)
+            except Exception as e:
+                logger.error(f"Gemini provider failed: {e}")
+                return LLMResponse(
+                    content=f"⚠️ **Gemini Error**: {str(e)}",
+                    tool_calls=[],
+                    provider="gemini",
+                    model=self.gemini.model,
+                )
+
+        # Route 4: Auto mode (Preferred order: OpenAI -> Gemini -> Ollama -> Rule-based)
+        if self.openai and self.openai.is_configured():
+            try:
+                return await self.openai.generate_response(messages, tools=tools, temperature=temperature)
+            except Exception as e:
+                logger.warning(f"OpenAI in auto mode failed: {e}. Trying Gemini...")
+
         if self.gemini and self.gemini.is_configured():
             try:
                 return await self.gemini.generate_response(messages, tools=tools, temperature=temperature)
             except Exception as e:
                 logger.warning(f"Gemini provider failed: {e}. Falling back to Ollama...")
 
-        # Route 3: Ollama with Qwen 3.5 / 2.5
+        # Route 5: Ollama with Qwen 3.5 / 2.5
         try:
             return await self.ollama.generate_response(messages, tools=tools, temperature=temperature)
         except Exception as e:
             logger.warning(f"Ollama provider failed: {e}. Falling back to Rule-Based Agent...")
 
-        # Route 4: Fallback to Plot-Aware Rule-Based Provider
+        # Route 6: Fallback to Plot-Aware Rule-Based Provider
         return await self.fallback.generate_response(messages, tools=tools, temperature=temperature)
 
 
 def get_llm_provider(
     gemini_api_key: Optional[str] = None,
     gemini_model: Optional[str] = None,
+    openai_api_key: Optional[str] = None,
+    openai_model: Optional[str] = None,
     ollama_model: Optional[str] = None,
     preferred_provider: Optional[str] = "auto",
+    gemini_enable_search: Optional[bool] = None,
 ) -> BaseLLMProvider:
     return FallbackLLMManager(
         gemini_api_key=gemini_api_key,
         gemini_model=gemini_model,
+        openai_api_key=openai_api_key,
+        openai_model=openai_model,
         ollama_model=ollama_model,
         preferred_provider=preferred_provider,
+        gemini_enable_search=gemini_enable_search,
     )

@@ -36,7 +36,7 @@ TOOL_DEFINITIONS: List[ToolDefinition] = [
             "properties": {
                 "crop_type": {
                     "type": "string",
-                    "enum": ["tomato", "corn", "wheat", "soybean", "lettuce", "potato", "carrot", "cotton"],
+                    "enum": ["tomato", "corn", "wheat", "soybean", "lettuce", "potato", "carrot", "cotton", "pumpkin", "strawberry"],
                     "description": "Crop type to plant",
                 },
                 "start_x": {"type": "integer", "description": "Start X coordinate"},
@@ -137,14 +137,28 @@ TOOL_DEFINITIONS: List[ToolDefinition] = [
             "required": [],
         },
     ),
+    ToolDefinition(
+        name="recall_plot_memory",
+        description="Recalls plot history, recorded interventions, or specific tile state from plot memory without re-running a full farm scan.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "x": {"type": "integer", "description": "Optional X coordinate to look up"},
+                "y": {"type": "integer", "description": "Optional Y coordinate to look up"},
+                "limit_events": {"type": "integer", "description": "Number of recent historical events to retrieve (default 5)"},
+            },
+            "required": [],
+        },
+    ),
 ]
 
 
 class ToolExecutor:
     """Executes agent tool calls directly against the live SimulationEngine."""
 
-    def __init__(self, engine: SimulationEngine):
+    def __init__(self, engine: SimulationEngine, plot_memory: Optional[Any] = None):
         self.engine = engine
+        self.plot_memory = plot_memory
 
     def execute(self, tool_call: ToolCall) -> Dict[str, Any]:
         name = tool_call.name
@@ -175,6 +189,12 @@ class ToolExecutor:
                     for y in range(start_y, end_y + 1):
                         if self.engine.plant_crop(x, y, crop_type):
                             planted_count += 1
+                if self.plot_memory and planted_count > 0:
+                    self.plot_memory.record_event(
+                        day=self.engine.world.current_day,
+                        event_type="plant",
+                        description=f"Planted {planted_count}x {crop_type_str} across ({start_x},{start_y}) to ({end_x},{end_y})",
+                    )
                 return {"status": "success", "planted_count": planted_count, "crop_type": crop_type_str}
 
             elif name == "apply_irrigation":
@@ -193,6 +213,13 @@ class ToolExecutor:
                     y = int(args.get("y", 0))
                     if self.engine.set_irrigation(x, y, itype, rate):
                         updated += 1
+
+                if self.plot_memory and updated > 0:
+                    self.plot_memory.record_event(
+                        day=self.engine.world.current_day,
+                        event_type="irrigate",
+                        description=f"Set irrigation to {itype.value} @ {rate}mm/day ({updated} tiles)",
+                    )
                 return {"status": "success", "tiles_updated": updated, "rate_mm_per_day": rate, "irrigation_type": itype.value}
 
             elif name == "apply_fertilizer":
@@ -211,6 +238,13 @@ class ToolExecutor:
                     y = int(args.get("y", 0))
                     if self.engine.apply_fertilizer(x, y, n, p, k):
                         updated += 1
+
+                if self.plot_memory and updated > 0:
+                    self.plot_memory.record_event(
+                        day=self.engine.world.current_day,
+                        event_type="fertilize",
+                        description=f"Applied fertilizer N={n}, P={p}, K={k} ({updated} tiles)",
+                    )
                 return {"status": "success", "tiles_fertilized": updated, "added_npk": {"n": n, "p": p, "k": k}}
 
             elif name == "run_what_if_analysis":
@@ -248,6 +282,12 @@ class ToolExecutor:
             elif name == "advance_simulation":
                 days = int(args.get("days", 1))
                 logs = self.engine.step_days(days)
+                if self.plot_memory:
+                    self.plot_memory.record_event(
+                        day=self.engine.world.current_day,
+                        event_type="simulate",
+                        description=f"Simulation advanced by {days} days to Day {self.engine.world.current_day}",
+                    )
                 return {
                     "status": "success",
                     "advanced_days": days,
@@ -261,6 +301,24 @@ class ToolExecutor:
             elif name == "update_farm_profile":
                 updated = self.engine.update_profile(args)
                 return {"status": "success", "profile": updated.model_dump()}
+
+            elif name == "recall_plot_memory":
+                if not self.plot_memory:
+                    return {"status": "no_memory_initialized", "message": "Plot memory not active."}
+                limit_events = int(args.get("limit_events", 5))
+                resp = {
+                    "farm_id": self.plot_memory.farm_id,
+                    "tracked_plots": len(self.plot_memory.known_plots),
+                    "recent_events": [
+                        {"day": e.timestamp_day, "type": e.event_type, "desc": e.description}
+                        for e in self.plot_memory.events_log[-limit_events:]
+                    ],
+                }
+                if "x" in args and "y" in args:
+                    coord = (int(args["x"]), int(args["y"]))
+                    record = self.plot_memory.known_plots.get(coord)
+                    resp["plot_record"] = record.model_dump() if record else "Coordinate not yet tracked"
+                return resp
 
             else:
                 return {"error": f"Unknown tool: {name}"}

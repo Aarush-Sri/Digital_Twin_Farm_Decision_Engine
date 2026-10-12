@@ -122,6 +122,12 @@ export const apiClient = {
     });
   },
 
+  async clearFarm(farmId) {
+    return request(`/api/v1/farm/${encodeURIComponent(farmId)}/clear`, {
+      method: 'POST',
+    });
+  },
+
   async saveFarmSnapshot(farmId) {
     return request(`/api/v1/farm/${encodeURIComponent(farmId)}/save`, {
       method: 'POST',
@@ -161,17 +167,31 @@ export const apiClient = {
     return request('/api/v1/agent/status');
   },
 
-  async sendAgentChat(farmId, { prompt, chatHistory = [], maxSteps = 5, geminiApiKey = null, model = null, preferredProvider = 'auto', frontendFarmContext = null }) {
+  async verifyGeminiKey({ apiKey = null, model = null, testAllModels = false } = {}) {
+    return request('/api/v1/agent/verify-gemini', {
+      method: 'POST',
+      body: JSON.stringify({
+        api_key: apiKey,
+        model,
+        test_all_models: testAllModels,
+      }),
+    });
+  },
+
+  async sendAgentChat(farmId, { prompt, chatHistory = [], maxSteps = 5, openaiApiKey = null, openaiModel = null, geminiApiKey = null, model = null, preferredProvider = 'auto', frontendFarmContext = null, enableSearch = null }) {
     return request(`/api/v1/agent/${encodeURIComponent(farmId)}/chat`, {
       method: 'POST',
       body: JSON.stringify({
         prompt,
         chat_history: chatHistory,
         max_steps: maxSteps,
+        openai_api_key: openaiApiKey,
+        openai_model: openaiModel,
         gemini_api_key: geminiApiKey,
         model,
         preferred_provider: preferredProvider,
         frontend_farm_context: frontendFarmContext,
+        enable_search: enableSearch,
       }),
     });
   },

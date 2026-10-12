@@ -47,7 +47,7 @@ describe('Farm UI Components', () => {
     expect(mockOpenProfile).toHaveBeenCalled();
   });
 
-  it('renders Sidebar with all 6 farm items', () => {
+  it('renders Sidebar with all 6 farm items and resize controls', () => {
     render(
       <FarmProvider>
         <Sidebar />
@@ -61,6 +61,25 @@ describe('Farm UI Components', () => {
     expect(screen.getByText('Water Canal')).toBeInTheDocument();
     expect(screen.getByText('Wheat Crop')).toBeInTheDocument();
     expect(screen.getByText('Carrot Patch')).toBeInTheDocument();
+
+    // Verify resize handle and preset buttons
+    expect(screen.getByLabelText('Resize Farm Palette')).toBeInTheDocument();
+    expect(screen.getByTitle('Compact (270px)')).toBeInTheDocument();
+    expect(screen.getByTitle('Standard (340px)')).toBeInTheDocument();
+    expect(screen.getByTitle('Expanded (440px)')).toBeInTheDocument();
+
+    // Verify collapse button on the side of Farm Palette
+    const collapseBtn = screen.getByTitle('Collapse Farm Palette');
+    expect(collapseBtn).toBeInTheDocument();
+
+    // Clicking collapse shrinks sidebar to collapsed rail
+    fireEvent.click(collapseBtn);
+    const expandBtn = screen.getAllByTitle('Expand Farm Palette')[0];
+    expect(expandBtn).toBeInTheDocument();
+
+    // Clicking expand brings back full palette
+    fireEvent.click(expandBtn);
+    expect(screen.getByTitle('Collapse Farm Palette')).toBeInTheDocument();
   });
 
   it('renders FarmCanvas with default pre-designed preset farm items', () => {
@@ -111,10 +130,22 @@ describe('Farm UI Components', () => {
     expect(screen.queryByText('Simulation Panel')).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/Ask about crops/i)).not.toBeInTheDocument();
 
+    // Verify resize handle and presets
+    expect(screen.getByLabelText('Resize AI Panel')).toBeInTheDocument();
+    expect(screen.getByTitle('Standard (540px)')).toBeInTheDocument();
+    expect(screen.getByTitle('Wide (760px)')).toBeInTheDocument();
+    expect(screen.getByTitle('Expanded (960px)')).toBeInTheDocument();
+
+    // Clicking Wide preset updates width
+    fireEvent.click(screen.getByTitle('Wide (760px)'));
+    const drawerContainer = screen.getByLabelText('Resize AI Panel').parentElement;
+    expect(drawerContainer.style.width).toBe('760px');
+
     // Click Done to return to chat
     fireEvent.click(screen.getByText(/Done & Return to Chat/i));
     expect(screen.getByText('Simulation Panel')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Ask about crops/i)).toBeInTheDocument();
+    expect(screen.getByTitle('Collapse AI Panel')).toBeInTheDocument();
   });
 
   it('updates dimensions from DimensionBadge numeric inputs and presets', () => {

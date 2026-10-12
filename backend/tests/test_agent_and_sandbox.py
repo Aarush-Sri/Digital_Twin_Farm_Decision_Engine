@@ -5,6 +5,7 @@ from app.simulation.sandbox import SimulationSandbox, TreatmentAction
 from app.orchestrator.agent import AgricultureAgent
 from app.orchestrator.tools import ToolExecutor, TOOL_DEFINITIONS
 from app.llm.base import ToolCall
+from app.llm.factory import get_llm_provider
 
 
 def test_simulation_sandbox_comparison():
@@ -64,7 +65,7 @@ def test_tool_executor_dispatch():
 @pytest.mark.asyncio
 async def test_agent_run_loop():
     engine = SimulationEngine()
-    agent = AgricultureAgent(engine=engine)
+    agent = AgricultureAgent(engine=engine, llm=get_llm_provider(preferred_provider="fallback"))
     resp = await agent.run("Please inspect the farm and water the crops if moisture is low.")
 
     assert resp.final_response is not None
@@ -75,7 +76,7 @@ async def test_agent_run_loop():
 @pytest.mark.asyncio
 async def test_agent_run_with_frontend_farm_context():
     engine = SimulationEngine()
-    agent = AgricultureAgent(engine=engine)
+    agent = AgricultureAgent(engine=engine, llm=get_llm_provider(preferred_provider="fallback"))
     frontend_context = {
         "canvas_scale": {"pixels_per_meter": 40, "grid_snap_m": 0.5},
         "total_items": 2,
