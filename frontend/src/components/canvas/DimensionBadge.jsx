@@ -1,16 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, BringToFront, Plus, Minus, Move } from 'lucide-react';
+import { Trash2, BringToFront, Plus, Minus, Move, RotateCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { 
   PIXELS_PER_METER, 
   pxToMetersNum, 
+  pxToMeters,
   metersToPx, 
   GRID_SIZE,
   getItemDefinition 
 } from '../../types/farm';
 
-export const DimensionBadge = ({ item, onUpdateDimensions, onDelete, onBringToFront, showDimensions = false }) => {
+export const DimensionBadge = ({
+  item,
+  onUpdateDimensions,
+  onUpdateRotation,
+  onDelete,
+  onBringToFront,
+  showDimensions = false,
+}) => {
   const itemDef = getItemDefinition(item.type);
+  const isPoint = Boolean(item.isPointIcon || itemDef.isPointIcon);
+  const isLine = item.type === 'fence' || item.type === 'pipe';
   const [meterWidth, setMeterWidth] = useState(pxToMetersNum(item.width));
   const [meterHeight, setMeterHeight] = useState(pxToMetersNum(item.height));
 
@@ -70,7 +80,7 @@ export const DimensionBadge = ({ item, onUpdateDimensions, onDelete, onBringToFr
   return (
     <motion.div
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
+      animate={{ opacity: 1, y: 0, scale: 1, rotate: -(item.rotation || 0) }}
       exit={{ opacity: 0, y: 6, scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 450, damping: 30 }}
       onPointerDown={(e) => e.stopPropagation()}
@@ -83,103 +93,156 @@ export const DimensionBadge = ({ item, onUpdateDimensions, onDelete, onBringToFr
         {item.type}
       </span>
 
-      {showDimensions && (
-        <>
-          {/* Meter Dimension Steppers & Inputs */}
-          <div className="flex items-center space-x-1.5 font-mono text-[11px] bg-stone-900/90 px-2 py-0.5 rounded-lg border border-amber-950">
-            {/* Width Control */}
-            <div className="flex items-center space-x-0.5">
-              <span className="text-amber-500 font-semibold text-[10px]">W</span>
-              <button
-                type="button"
-                title="Decrease width by 0.5m"
-                onClick={() => adjustWidth(-0.5)}
-                className="p-0.5 text-stone-400 hover:text-amber-200 rounded hover:bg-stone-800 transition-colors"
-              >
-                <Minus className="w-2.5 h-2.5" />
-              </button>
-              <input
-                type="number"
-                step="0.5"
-                min="0.3"
-                max="30"
-                value={meterWidth}
-                onChange={handleWidthChange}
-                className="w-11 bg-transparent text-center text-amber-100 font-bold focus:outline-none focus:text-amber-300"
-              />
-              <span className="text-amber-500 text-[10px]">m</span>
-              <button
-                type="button"
-                title="Increase width by 0.5m"
-                onClick={() => adjustWidth(0.5)}
-                className="p-0.5 text-stone-400 hover:text-amber-200 rounded hover:bg-stone-800 transition-colors"
-              >
-                <Plus className="w-2.5 h-2.5" />
-              </button>
-            </div>
-
-            <span className="text-stone-600">×</span>
-
-            {/* Height Control */}
-            <div className="flex items-center space-x-0.5">
-              <span className="text-amber-500 font-semibold text-[10px]">H</span>
-              <button
-                type="button"
-                title="Decrease height by 0.5m"
-                onClick={() => adjustHeight(-0.5)}
-                className="p-0.5 text-stone-400 hover:text-amber-200 rounded hover:bg-stone-800 transition-colors"
-              >
-                <Minus className="w-2.5 h-2.5" />
-              </button>
-              <input
-                type="number"
-                step="0.5"
-                min="0.3"
-                max="30"
-                value={meterHeight}
-                onChange={handleHeightChange}
-                className="w-11 bg-transparent text-center text-amber-100 font-bold focus:outline-none focus:text-amber-300"
-              />
-              <span className="text-amber-500 text-[10px]">m</span>
-              <button
-                type="button"
-                title="Increase height by 0.5m"
-                onClick={() => adjustHeight(0.5)}
-                className="p-0.5 text-stone-400 hover:text-amber-200 rounded hover:bg-stone-800 transition-colors"
-              >
-                <Plus className="w-2.5 h-2.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Realistic Scale Presets */}
-          <div className="flex items-center space-x-1 pl-1 border-l border-amber-950">
+      {/* Point Icons (Fixed Size Structures / Trees / Wells / Huts) */}
+      {isPoint ? (
+        <div className="flex items-center space-x-1.5 font-mono text-[11px] bg-stone-900/90 px-2.5 py-0.5 rounded-lg border border-amber-950 text-amber-200">
+          <span>{pxToMeters(item.width)} × {pxToMeters(item.height)}</span>
+          <span className="text-[9px] text-amber-400 font-sans font-medium bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800/60">
+            Fixed Structure
+          </span>
+        </div>
+      ) : isLine ? (
+        /* Line Components (Fence, Pipe): Rotatable + Length Stepper */
+        <div className="flex items-center space-x-1.5">
+          <div className="flex items-center space-x-0.5 font-mono text-[11px] bg-stone-900/90 px-2 py-0.5 rounded-lg border border-amber-950">
+            <span className="text-amber-500 font-semibold text-[10px]">Length</span>
             <button
               type="button"
-              title="1m × 1m (Tree square)"
-              onClick={() => setMeterPreset(1, 1)}
-              className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-stone-900 hover:bg-amber-950 text-stone-300 hover:text-amber-200 border border-stone-800 transition-colors"
+              title="Decrease length by 0.5m"
+              onClick={() => adjustWidth(-0.5)}
+              className="p-0.5 text-stone-400 hover:text-amber-200 rounded hover:bg-stone-800 transition-colors"
             >
-              1×1m
+              <Minus className="w-2.5 h-2.5" />
             </button>
+            <input
+              type="number"
+              step="0.5"
+              min="0.3"
+              max="30"
+              value={meterWidth}
+              onChange={handleWidthChange}
+              className="w-11 bg-transparent text-center text-amber-100 font-bold focus:outline-none focus:text-amber-300"
+            />
+            <span className="text-amber-500 text-[10px]">m</span>
             <button
               type="button"
-              title="2m × 2m (Standard plot)"
-              onClick={() => setMeterPreset(2, 2)}
-              className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-stone-900 hover:bg-amber-950 text-stone-300 hover:text-amber-200 border border-stone-800 transition-colors"
+              title="Increase length by 0.5m"
+              onClick={() => adjustWidth(0.5)}
+              className="p-0.5 text-stone-400 hover:text-amber-200 rounded hover:bg-stone-800 transition-colors"
             >
-              2×2m
-            </button>
-            <button
-              type="button"
-              title="4m × 2m (Canal / extended field)"
-              onClick={() => setMeterPreset(4, 2)}
-              className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-stone-900 hover:bg-amber-950 text-stone-300 hover:text-amber-200 border border-stone-800 transition-colors"
-            >
-              4×2m
+              <Plus className="w-2.5 h-2.5" />
             </button>
           </div>
-        </>
+
+          {onUpdateRotation && (
+            <button
+              type="button"
+              title="Rotate 90 degrees"
+              onClick={() => onUpdateRotation(item.id, ((item.rotation || 0) + 90) % 360)}
+              className="flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-mono bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-700/60 transition-colors shadow-sm"
+            >
+              <RotateCw className="w-3 h-3 text-amber-400" />
+              <span>{(item.rotation || 0)}°</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        /* Resizable Terrain & Crop Plots: Width × Height Inputs */
+        <div className="flex items-center space-x-1.5 font-mono text-[11px] bg-stone-900/90 px-2 py-0.5 rounded-lg border border-amber-950">
+          {/* Width Control */}
+          <div className="flex items-center space-x-0.5">
+            <span className="text-amber-500 font-semibold text-[10px]">W</span>
+            <button
+              type="button"
+              title="Decrease width by 0.5m"
+              onClick={() => adjustWidth(-0.5)}
+              className="p-0.5 text-stone-400 hover:text-amber-200 rounded hover:bg-stone-800 transition-colors"
+            >
+              <Minus className="w-2.5 h-2.5" />
+            </button>
+            <input
+              type="number"
+              step="0.5"
+              min="0.3"
+              max="30"
+              value={meterWidth}
+              onChange={handleWidthChange}
+              className="w-11 bg-transparent text-center text-amber-100 font-bold focus:outline-none focus:text-amber-300"
+            />
+            <span className="text-amber-500 text-[10px]">m</span>
+            <button
+              type="button"
+              title="Increase width by 0.5m"
+              onClick={() => adjustWidth(0.5)}
+              className="p-0.5 text-stone-400 hover:text-amber-200 rounded hover:bg-stone-800 transition-colors"
+            >
+              <Plus className="w-2.5 h-2.5" />
+            </button>
+          </div>
+
+          <span className="text-stone-600">×</span>
+
+          {/* Height Control */}
+          <div className="flex items-center space-x-0.5">
+            <span className="text-amber-500 font-semibold text-[10px]">H</span>
+            <button
+              type="button"
+              title="Decrease height by 0.5m"
+              onClick={() => adjustHeight(-0.5)}
+              className="p-0.5 text-stone-400 hover:text-amber-200 rounded hover:bg-stone-800 transition-colors"
+            >
+              <Minus className="w-2.5 h-2.5" />
+            </button>
+            <input
+              type="number"
+              step="0.5"
+              min="0.3"
+              max="30"
+              value={meterHeight}
+              onChange={handleHeightChange}
+              className="w-11 bg-transparent text-center text-amber-100 font-bold focus:outline-none focus:text-amber-300"
+            />
+            <span className="text-amber-500 text-[10px]">m</span>
+            <button
+              type="button"
+              title="Increase height by 0.5m"
+              onClick={() => adjustHeight(0.5)}
+              className="p-0.5 text-stone-400 hover:text-amber-200 rounded hover:bg-stone-800 transition-colors"
+            >
+              <Plus className="w-2.5 h-2.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Realistic Scale Presets (Only for resizable crops & terrain) */}
+      {!isPoint && !isLine && (
+        <div className="flex items-center space-x-1 pl-1 border-l border-amber-950">
+          <button
+            type="button"
+            title="1m × 1m plot"
+            onClick={() => setMeterPreset(1, 1)}
+            className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-stone-900 hover:bg-amber-950 text-stone-300 hover:text-amber-200 border border-stone-800 transition-colors"
+          >
+            1×1m
+          </button>
+          <button
+            type="button"
+            title="2m × 2m plot"
+            onClick={() => setMeterPreset(2, 2)}
+            className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-stone-900 hover:bg-amber-950 text-stone-300 hover:text-amber-200 border border-stone-800 transition-colors"
+          >
+            2×2m
+          </button>
+          <button
+            type="button"
+            title="4m × 2m plot"
+            onClick={() => setMeterPreset(4, 2)}
+            className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-stone-900 hover:bg-amber-950 text-stone-300 hover:text-amber-200 border border-stone-800 transition-colors"
+          >
+            4×2m
+          </button>
+        </div>
       )}
 
       {/* Layer Priority Tier & Actions */}

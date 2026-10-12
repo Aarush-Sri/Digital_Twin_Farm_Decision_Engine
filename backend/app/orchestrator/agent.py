@@ -6,6 +6,7 @@ from .prompts import AGRONOMIST_SYSTEM_PROMPT
 from .tools import TOOL_DEFINITIONS, ToolExecutor
 from .plot_memory import FarmPlotMemory, plot_memory_manager
 from ..simulation.engine import SimulationEngine
+from ..simulation.plant_registry import format_plant_database_for_prompt
 from ..llm.base import BaseLLMProvider, LLMMessage, LLMResponse, ToolCall
 from ..llm.factory import get_llm_provider
 
@@ -58,7 +59,6 @@ class AgricultureAgent:
             frontend_farm_context=frontend_farm_context,
             force_refresh=False,
         )
-
         context_prompt = (
             f"{AGRONOMIST_SYSTEM_PROMPT}\n\n"
             f"{memory_context}"

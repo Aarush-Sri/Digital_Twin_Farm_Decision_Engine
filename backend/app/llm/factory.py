@@ -5,6 +5,7 @@ from .base import BaseLLMProvider, LLMMessage, LLMResponse, ToolDefinition, Tool
 from .gemini_provider import GeminiProvider
 from .ollama_provider import OllamaProvider
 from .openai_provider import OpenAIProvider
+from ..simulation.plant_registry import PLANT_REGISTRY
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -194,8 +195,25 @@ class RuleBasedFallbackProvider(BaseLLMProvider):
                 f"2. Elevate crop seeding beds on 2×2m grid modules and suspend all irrigation."
             )
 
+        # Check if user specifically asks about a registered plant/crop/tree
+        matched_plant = next((m for pid, m in PLANT_REGISTRY.items() if pid in p or m["name"].lower() in p), None)
+        if matched_plant:
+            npk = matched_plant["optimal_npk_ppm"]
+            varieties_str = ", ".join(matched_plant["varieties"])
+            return (
+                f"### 🌿 Botanical Profile: {matched_plant['name']} (`{matched_plant['scientific_name']}`)\n\n"
+                f"- **Category & Varieties:** {matched_plant['category']} • {varieties_str}\n"
+                f"- **Thermal Profile:** Base Temp `{matched_plant['base_temp_c']}°C`, Maturity requires `{matched_plant['gdd_maturity']} GDD` ({matched_plant['growing_season_days']})\n"
+                f"- **Water Dynamics:** Crop Coefficients $K_c$=[ini: `{matched_plant['kc_stages']['initial']}`, mid: `{matched_plant['kc_stages']['mid']}`, end: `{matched_plant['kc_stages']['end']}`] with daily demand of `{matched_plant['water_demand_mm_per_day']}`\n"
+                f"- **Soil & Nutrients:** Optimal pH `{matched_plant['optimal_ph']}` | Optimal NPK: **N={npk['n']}ppm, P={npk['p']}ppm, K={npk['k']}ppm**\n"
+                f"- **Root & Yield:** Root Depth `{matched_plant['root_depth_cm']}` | Max Harvest Potential: **{matched_plant['max_yield_kg_per_m2']} kg/m²**\n\n"
+                f"**Agronomic Guidance:**\n"
+                f"- {matched_plant['tolerance']}\n"
+                f"- {matched_plant['management_tips']}"
+            )
+
         # 3. SCENARIO: Crop Comparison & Suitability
-        elif any(w in p for w in ["compare", "carrot", "wheat", "tree", "which crop", "what to plant"]):
+        elif any(w in p for w in ["compare", "which crop", "what to plant"]):
             return (
                 f"### 🌾 Crop Variety Comparative Matrix\n\n"
                 f"| Parameter | 🌾 Wheat Crop | 🥕 Carrot Patch | 🌳 Orchard Tree |\n"

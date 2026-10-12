@@ -41,7 +41,7 @@ describe('Farm UI Components', () => {
     expect(screen.getByText('Profile')).toBeInTheDocument();
     expect(screen.getByText('Preset Farm')).toBeInTheDocument();
     expect(screen.getByText(/⚡ Ask AI/)).toBeInTheDocument();
-    expect(screen.getByText(/Llama 3.2/)).toBeInTheDocument();
+    expect(screen.getByText(/Qwen 3.5|Llama 3.2/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Profile'));
     expect(mockOpenProfile).toHaveBeenCalled();
@@ -96,6 +96,28 @@ describe('Farm UI Components', () => {
     expect(screen.getByText(/Objects: 22/)).toBeInTheDocument();
   });
 
+  it('renders EditorToolbar static in the middle top outside the scrolling canvas', () => {
+    const { container } = render(
+      <FarmProvider>
+        <FarmCanvas />
+      </FarmProvider>
+    );
+
+    const canvasMain = container.querySelector('main');
+    expect(canvasMain).toBeInTheDocument();
+
+    const zoomResetBtn = screen.getByTitle('Reset Zoom to 100%');
+    const toolbar = zoomResetBtn.closest('[class*="z-30"]');
+    expect(toolbar).toBeInTheDocument();
+
+    // Must be outside the scrolling main container so wheel scrolling doesn't move it
+    expect(canvasMain).not.toContainElement(toolbar);
+
+    // Must be centered in the middle top
+    expect(toolbar.className).toMatch(/left-1\/2/);
+    expect(toolbar.className).toMatch(/-translate-x-1\/2/);
+  });
+
   it('renders WhatIfModal when open and shows scenario presets', () => {
     render(
       <FarmProvider>
@@ -119,7 +141,7 @@ describe('Farm UI Components', () => {
     expect(screen.getByText('Simulation Panel')).toBeInTheDocument();
     expect(screen.getByText(/Chat/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Active AI Model:/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Llama 3.2/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Qwen 3.5|Llama 3.2/i).length).toBeGreaterThan(0);
 
     // Open Settings: should NOT show the chat page or simulation tab switcher
     const settingsBtn = screen.getByRole('button', { name: /settings/i });

@@ -128,7 +128,7 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
     activeAiModel: contextActiveAiModel,
   } = useFarm();
 
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState(() => [
     {
       id: 'welcome',
       role: 'assistant',
@@ -234,8 +234,8 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
   });
   const [localModel, setLocalModel] = useState(() => {
     return contextLocalModel || (typeof window !== 'undefined'
-      ? localStorage.getItem('GREENTWIN_LOCAL_MODEL') || 'llama3.2:1b'
-      : 'llama3.2:1b');
+      ? localStorage.getItem('GREENTWIN_LOCAL_MODEL') || 'qwen3.5:latest'
+      : 'qwen3.5:latest');
   });
   const [installedModels, setInstalledModels] = useState(['phi4-mini:latest', 'llama3.2:1b', 'qwen3.5:latest']);
   const [backendAgentStatus, setBackendAgentStatus] = useState(null);

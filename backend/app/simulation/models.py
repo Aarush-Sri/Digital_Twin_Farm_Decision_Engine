@@ -14,8 +14,15 @@ class CropType(str, Enum):
     POTATO = "potato"
     CARROT = "carrot"
     COTTON = "cotton"
+    PADDY = "paddy"
+    SUGARCANE = "sugarcane"
+    BANANA = "banana"
     PUMPKIN = "pumpkin"
     STRAWBERRY = "strawberry"
+    TREE = "tree"
+    NEEM_TREE = "neem_tree"
+    MANGO_TREE = "mango_tree"
+    COCONUT_TREE = "coconut_tree"
 
 
 class GrowthStage(str, Enum):
@@ -154,6 +161,8 @@ class FarmWorld(BaseModel):
     profile: FarmProfile = Field(default_factory=FarmProfile)
     environment: EnvironmentState = Field(default_factory=EnvironmentState)
     tiles: List[FarmTile] = Field(default_factory=list)
+    canvas_items: List[Dict[str, Any]] = Field(default_factory=list)
+    canvas_settings: Dict[str, Any] = Field(default_factory=dict)
     history: List[SimulationLogEntry] = Field(default_factory=list)
 
     def get_tile(self, x: int, y: int) -> Optional[FarmTile]:

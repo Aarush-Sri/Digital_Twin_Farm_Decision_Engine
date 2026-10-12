@@ -224,4 +224,21 @@ describe('Farm Reducer State Transitions', () => {
     expect(reloadedState.items.length).toBeGreaterThan(10);
     expect(reloadedState.selectedId).toBeNull();
   });
+
+  it('updates item rotation and pushes to undo history', () => {
+    const initialState = {
+      ...INITIAL_STATE,
+      items: [{ id: 'fence-1', type: 'fence', x: 20, y: 20, width: 160, height: 16, rotation: 0 }],
+      past: [],
+    };
+
+    const rotatedState = farmReducer(initialState, {
+      type: ACTION_TYPES.UPDATE_ROTATION,
+      payload: { id: 'fence-1', rotation: 90 },
+    });
+
+    expect(rotatedState.items[0].rotation).toBe(90);
+    expect(rotatedState.past).toHaveLength(1);
+    expect(rotatedState.past[0][0].rotation).toBe(0);
+  });
 });

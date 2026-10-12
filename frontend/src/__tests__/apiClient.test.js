@@ -171,4 +171,34 @@ describe('GreenTwin API Client', () => {
     expect(updateRes.status).toBe('updated');
     expect(updateRes.profile.soil_texture).toBe('sandy');
   });
+
+  it('synchronizes 2D farm layout to backend engine', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'synchronized',
+        farm_id: 'farm-123',
+        items_count: 2,
+        summary: { total_tiles: 100 },
+      }),
+    });
+
+    const res = await apiClient.syncFarmLayout('farm-123', {
+      items: [
+        { type: 'wheat', x: 0, y: 0, width: 40, height: 40 },
+        { type: 'water', x: 40, y: 0, width: 40, height: 40 },
+      ],
+      farmSettings: { name: 'Test Farm' },
+    });
+
+    expect(res.status).toBe('synchronized');
+    expect(res.items_count).toBe(2);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/v1/farm/farm-123/sync'),
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"type":"wheat"'),
+      })
+    );
+  });
 });

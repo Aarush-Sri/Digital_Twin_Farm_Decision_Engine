@@ -3,10 +3,25 @@ from typing import Dict, Any, List, Optional
 from ..simulation.models import CropType, IrrigationType
 from ..simulation.engine import SimulationEngine
 from ..simulation.sandbox import SimulationSandbox, TreatmentAction
+from ..simulation.plant_registry import get_plant_profile, get_all_plants, PLANT_REGISTRY
 from ..llm.base import ToolDefinition, ToolCall
 
 
 TOOL_DEFINITIONS: List[ToolDefinition] = [
+    ToolDefinition(
+        name="inspect_plant_database",
+        description="Retrieves certified botanical, phenological (GDD, Kc), water demand, soil NPK/pH, and root depth data for a specific plant/crop/tree or returns all plants in the digital twin.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "plant_name": {
+                    "type": "string",
+                    "description": "Optional plant/crop/tree name (e.g. 'wheat', 'carrot', 'tomato', 'corn', 'paddy', 'sugarcane', 'banana', 'pumpkin', 'strawberry', 'tree', 'neem_tree', 'mango_tree', 'coconut_tree')",
+                },
+            },
+            "required": [],
+        },
+    ),
     ToolDefinition(
         name="inspect_farm_status",
         description="Retrieves a high-level summary of the entire farm, current day, solar radiation, weather, crop distribution, and recent health logs.",
@@ -165,7 +180,19 @@ class ToolExecutor:
         args = tool_call.arguments
 
         try:
-            if name == "inspect_farm_status":
+            if name == "inspect_plant_database":
+                plant_name = args.get("plant_name")
+                if plant_name:
+                    profile = get_plant_profile(plant_name)
+                    if profile:
+                        return {"status": "success", "plant": profile}
+                    return {
+                        "status": "not_found",
+                        "message": f"Plant '{plant_name}' not found. Available plants: {list(PLANT_REGISTRY.keys())}",
+                    }
+                return {"status": "success", "total_registered_plants": len(PLANT_REGISTRY), "plants": list(PLANT_REGISTRY.values())}
+
+            elif name == "inspect_farm_status":
                 return self.engine.get_summary()
 
             elif name == "inspect_tile_detail":

@@ -32,7 +32,7 @@ PROMPTS = [
 ]
 
 
-async def test_ollama_model(model_name: str):
+async def validate_ollama_model(model_name: str):
     print(f"\n=======================================================")
     print(f" TESTING OLLAMA MODEL: {model_name}")
     print(f"=======================================================")
@@ -65,7 +65,7 @@ async def test_ollama_model(model_name: str):
             print(f"FAILED with error: {e}")
 
 
-def test_agent_with_simulated_world(model_name: str):
+def validate_agent_with_simulated_world(model_name: str):
     print(f"\n=======================================================")
     print(f" TESTING FULL AGENT PIPELINE: {model_name}")
     print(f"=======================================================")
@@ -91,10 +91,10 @@ def test_agent_with_simulated_world(model_name: str):
 if __name__ == "__main__":
     print("Starting Model Validation Suite...")
     # 1. Test Llama 3.2:1b across all 3 prompts
-    asyncio.run(test_ollama_model("llama3.2:1b"))
+    asyncio.run(validate_ollama_model("llama3.2:1b"))
 
     # 2. Test Qwen 3.5 across all 3 prompts
-    asyncio.run(test_ollama_model("qwen3.5:latest"))
+    asyncio.run(validate_ollama_model("qwen3.5:latest"))
 
     # 3. Test Full Pipeline
-    test_agent_with_simulated_world("llama3.2:1b")
+    validate_agent_with_simulated_world("llama3.2:1b")

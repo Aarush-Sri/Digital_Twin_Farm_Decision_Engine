@@ -231,6 +231,147 @@ class SimulationEngine:
                 logs.append(self.world.history[-1])
         return logs
 
+    def sync_from_frontend(
+        self,
+        items: List[Dict[str, Any]],
+        farm_settings: Optional[Dict[str, Any]] = None,
+        farm_profile: Optional[Dict[str, Any]] = None,
+        environment: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Atomically synchronizes complete 2D canvas layout, environment, and settings from frontend."""
+        # 1. Update Profile & Settings if provided
+        if farm_profile:
+            self.update_profile(farm_profile)
+
+        if farm_settings and isinstance(farm_settings, dict):
+            if farm_settings.get("name"):
+                self.world.name = farm_settings["name"]
+            self.world.canvas_settings = farm_settings
+
+        # 2. Determine required grid dimensions to prevent edge clipping (scale: 40px = 1m = 1 tile)
+        max_x_needed = 10
+        max_y_needed = 10
+        for it in items:
+            px_x = it.get("x", 0)
+            px_w = it.get("width", 40)
+            px_y = it.get("y", 0)
+            px_h = it.get("height", 40)
+            tile_right = int(math.ceil((px_x + px_w) / 40.0))
+            tile_bottom = int(math.ceil((px_y + px_h) / 40.0))
+            if tile_right > max_x_needed:
+                max_x_needed = tile_right
+            if tile_bottom > max_y_needed:
+                max_y_needed = tile_bottom
+
+        new_width = max(10, min(50, max_x_needed))
+        new_height = max(10, min(50, max_y_needed))
+
+        # Re-grid if dimensions changed
+        if new_width != self.world.width or new_height != self.world.height or len(self.world.tiles) != new_width * new_height:
+            tile_map = {(t.x, t.y): t for t in self.world.tiles}
+            new_tiles = []
+            for x in range(new_width):
+                for y in range(new_height):
+                    if (x, y) in tile_map:
+                        t = tile_map[(x, y)]
+                        t.crop = None
+                        t.is_fallow = True
+                        t.irrigation_type = IrrigationType.NONE
+                        t.irrigation_rate_mm_per_day = 0.0
+                        new_tiles.append(t)
+                    else:
+                        new_tiles.append(
+                            FarmTile(
+                                x=x,
+                                y=y,
+                                soil=SoilState(
+                                    moisture_pct=65.0,
+                                    nitrogen_ppm=self.world.profile.baseline_nitrogen_ppm,
+                                    phosphorus_ppm=self.world.profile.baseline_phosphorus_ppm,
+                                    potassium_ppm=self.world.profile.baseline_potassium_ppm,
+                                    ph=self.world.profile.baseline_ph,
+                                ),
+                                is_fallow=True,
+                            )
+                        )
+            self.world.width = new_width
+            self.world.height = new_height
+            self.world.tiles = new_tiles
+        else:
+            # Reset existing tiles to fallow baseline before applying fresh canvas items
+            for tile in self.world.tiles:
+                tile.crop = None
+                tile.is_fallow = True
+                tile.irrigation_type = IrrigationType.NONE
+                tile.irrigation_rate_mm_per_day = 0.0
+
+        # Mapping dictionary from frontend types to CropType enums
+        crop_type_map = {
+            "wheat": CropType.WHEAT,
+            "carrot": CropType.CARROT,
+            "tomato": CropType.TOMATO,
+            "corn": CropType.CORN,
+            "soybean": CropType.SOYBEAN,
+            "lettuce": CropType.LETTUCE,
+            "potato": CropType.POTATO,
+            "cotton": CropType.COTTON,
+            "paddy": CropType.PADDY,
+            "sugarcane": CropType.SUGARCANE,
+            "banana": CropType.BANANA,
+            "pumpkin": CropType.PUMPKIN,
+            "strawberry": CropType.STRAWBERRY,
+            "tree": CropType.TREE,
+            "neem_tree": CropType.NEEM_TREE,
+            "mango_tree": CropType.MANGO_TREE,
+            "coconut_tree": CropType.COCONUT_TREE,
+        }
+
+        # 3. Populate tiles from items
+        for it in items:
+            raw_type = str(it.get("type", "")).lower()
+            px_x = it.get("x", 0)
+            px_y = it.get("y", 0)
+            px_w = it.get("width", 40)
+            px_h = it.get("height", 40)
+
+            start_x = max(0, int(px_x / 40.0))
+            start_y = max(0, int(px_y / 40.0))
+            end_x = min(self.world.width - 1, max(start_x, int((px_x + px_w - 1) / 40.0)))
+            end_y = min(self.world.height - 1, max(start_y, int((px_y + px_h - 1) / 40.0)))
+
+            if raw_type in crop_type_map:
+                ctype = crop_type_map[raw_type]
+                for x in range(start_x, end_x + 1):
+                    for y in range(start_y, end_y + 1):
+                        self.plant_crop(x, y, ctype)
+                        t = self.world.get_tile(x, y)
+                        if t and t.crop:
+                            if "tree" in ctype.value:
+                                t.crop.current_stage = GrowthStage.VEGETATIVE
+                                t.crop.biomass_grams = 4000.0
+                                t.crop.projected_yield_kg = 20.0
+                            else:
+                                t.crop.current_stage = GrowthStage.VEGETATIVE
+                                t.crop.biomass_grams = 50.0
+                                t.crop.projected_yield_kg = 4.2
+            elif raw_type in ["water", "pond", "well", "sprinkler", "pipe"]:
+                is_sprinkler = raw_type == "sprinkler"
+                is_pipe = raw_type == "pipe"
+                irr_type = IrrigationType.SPRINKLER if is_sprinkler else IrrigationType.DRIP
+                irr_rate = 10.0 if is_sprinkler else (5.0 if is_pipe else 8.0)
+
+                for x in range(start_x, end_x + 1):
+                    for y in range(start_y, end_y + 1):
+                        self.set_irrigation(x, y, irr_type, irr_rate)
+                        t = self.world.get_tile(x, y)
+                        if t:
+                            t.soil.moisture_pct = min(92.0, max(t.soil.moisture_pct, 75.0))
+
+        # Store persistent 2D layout items
+        self.world.canvas_items = items
+
+        return self.get_summary()
+
     def get_summary(self) -> Dict[str, Any]:
         """Returns high-level summary of farm state."""
         crops_by_type: Dict[str, int] = {}
@@ -256,5 +397,6 @@ class SimulationEngine:
             "crops_distribution": crops_by_type,
             "growth_stages": stage_counts,
             "total_projected_yield_kg": round(total_projected_yield, 2),
+            "canvas_items_count": len(self.world.canvas_items),
             "recent_history": [h.model_dump() for h in self.world.history[-5:]],
         }

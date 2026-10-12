@@ -60,4 +60,26 @@ describe('Farm Item Definitions & Scale Logic', () => {
     expect(metersToPx(1)).toBe(40);
     expect(metersToPx(2.5)).toBe(100);
   });
+
+  it('enforces fixed 2x2m trees, 4x4m huts/barns, and 3x3m wells as point icons', () => {
+    const barn = getItemDefinition(ITEM_TYPES.BARN);
+    expect(barn.defaultWidth).toBe(160); // 4m
+    expect(barn.defaultHeight).toBe(160);
+    expect(barn.isPointIcon).toBe(true);
+
+    const shed = getItemDefinition(ITEM_TYPES.SHED);
+    expect(shed.defaultWidth).toBe(160); // 4m hut/shed
+    expect(shed.defaultHeight).toBe(160);
+    expect(shed.isPointIcon).toBe(true);
+
+    const well = getItemDefinition(ITEM_TYPES.WELL);
+    expect(well.defaultWidth).toBe(120); // 3m well
+    expect(well.defaultHeight).toBe(120);
+    expect(well.isPointIcon).toBe(true);
+
+    const tree = getItemDefinition(ITEM_TYPES.TREE);
+    expect(tree.defaultWidth).toBe(80); // 2m tree
+    expect(tree.defaultHeight).toBe(80);
+    expect(tree.isPointIcon).toBe(true);
+  });
 });

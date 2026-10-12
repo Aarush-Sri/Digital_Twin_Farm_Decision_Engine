@@ -208,6 +208,7 @@ CROP_DATABASE: Dict[CropType, CropAgronomicProfile] = {
 }
 
 
+
 class CropGrowthEngine:
     """Calculates daily crop phenology, growing degree days, environmental stress, and yield."""
 

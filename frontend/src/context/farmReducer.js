@@ -113,6 +113,7 @@ export const ACTION_TYPES = {
   ADD_ITEM: 'ADD_ITEM',
   UPDATE_POSITION: 'UPDATE_POSITION',
   UPDATE_DIMENSIONS: 'UPDATE_DIMENSIONS',
+  UPDATE_ROTATION: 'UPDATE_ROTATION',
   UPDATE_ITEM_PROPERTIES: 'UPDATE_ITEM_PROPERTIES',
   SELECT_ITEM: 'SELECT_ITEM',
   DESELECT_ALL: 'DESELECT_ALL',
@@ -248,6 +249,26 @@ export const farmReducer = (state, action) => {
         items: state.items.map((item) =>
           item.id === id ? { ...item, ...properties } : item
         ),
+      };
+    }
+
+    case ACTION_TYPES.UPDATE_ROTATION: {
+      const { id, rotation } = action.payload;
+      const history = pushHistory(state);
+
+      return {
+        ...state,
+        ...history,
+        items: state.items.map((item) => {
+          if (item.id !== id) return item;
+          const newRot = typeof rotation === 'number'
+            ? (rotation % 360 + 360) % 360
+            : (((item.rotation || 0) + 90) % 360);
+          return {
+            ...item,
+            rotation: newRot,
+          };
+        }),
       };
     }
 
