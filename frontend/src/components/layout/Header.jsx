@@ -10,7 +10,6 @@ export const Header = ({ onOpenAgentChat, onOpenProfile }) => {
   const { 
     loadPresetFarm,
     items,
-    activeAiModel,
   } = useFarm();
 
   return (
@@ -55,24 +54,15 @@ export const Header = ({ onOpenAgentChat, onOpenProfile }) => {
           <span>Preset Farm</span>
         </button>
 
-        {/* Ask AI Agent Drawer Button with Active AI Model Indication */}
+        {/* Ask AI Agent Drawer Button */}
         <button
           type="button"
           onClick={onOpenAgentChat}
           className="group relative flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold text-stone-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 border-2 border-yellow-200 shadow-[0_0_15px_rgba(250,204,21,0.35)] hover:shadow-[0_0_20px_rgba(250,204,21,0.55)] transition-all active:scale-95"
-          title={`Open AI Agronomist — Active Model: ${activeAiModel?.label || 'Llama 3.2'} (${activeAiModel?.providerLabel || 'Local Ollama'})`}
+          title="Open AI Agronomist"
         >
           <Sparkles className="w-4 h-4 text-stone-950 group-hover:rotate-12 transition-transform" />
           <span className="tracking-wide uppercase font-sans">⚡ Ask AI</span>
-
-          {/* Active AI Model Badge with live status pulse */}
-          <span className="flex items-center space-x-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-stone-950 text-emerald-300 border border-stone-800 shadow-inner">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span>{activeAiModel?.shortLabel || 'Llama 3.2'}</span>
-          </span>
         </button>
       </div>
     </header>

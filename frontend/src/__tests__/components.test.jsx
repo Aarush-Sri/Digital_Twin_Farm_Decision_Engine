@@ -29,7 +29,7 @@ describe('Farm UI Components', () => {
     expect(mockQuickAdd).toHaveBeenCalledWith(grassDef);
   });
 
-  it('renders Header with clean AI title, Profile button, Preset Farm, and active AI model badge', () => {
+  it('renders Header with clean AI title, Profile button, Preset Farm, and Ask AI button', () => {
     const mockOpenProfile = vi.fn();
     render(
       <FarmProvider>
@@ -41,7 +41,6 @@ describe('Farm UI Components', () => {
     expect(screen.getByText('Profile')).toBeInTheDocument();
     expect(screen.getByText('Preset Farm')).toBeInTheDocument();
     expect(screen.getByText(/⚡ Ask AI/)).toBeInTheDocument();
-    expect(screen.getByText(/Qwen 3.5|Llama 3.2/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Profile'));
     expect(mockOpenProfile).toHaveBeenCalled();
@@ -62,11 +61,9 @@ describe('Farm UI Components', () => {
     expect(screen.getByText('Wheat Crop')).toBeInTheDocument();
     expect(screen.getByText('Carrot Patch')).toBeInTheDocument();
 
-    // Verify resize handle and preset buttons
+    // Verify resize handle and element count
     expect(screen.getByLabelText('Resize Farm Palette')).toBeInTheDocument();
-    expect(screen.getByTitle('Compact (270px)')).toBeInTheDocument();
-    expect(screen.getByTitle('Standard (340px)')).toBeInTheDocument();
-    expect(screen.getByTitle('Expanded (440px)')).toBeInTheDocument();
+    expect(screen.getByText(/Elements/)).toBeInTheDocument();
 
     // Verify collapse button on the side of Farm Palette
     const collapseBtn = screen.getByTitle('Collapse Farm Palette');
@@ -152,16 +149,8 @@ describe('Farm UI Components', () => {
     expect(screen.queryByText('Simulation Panel')).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/Ask about crops/i)).not.toBeInTheDocument();
 
-    // Verify resize handle and presets
+    // Verify resize handle
     expect(screen.getByLabelText('Resize AI Panel')).toBeInTheDocument();
-    expect(screen.getByTitle('Standard (540px)')).toBeInTheDocument();
-    expect(screen.getByTitle('Wide (760px)')).toBeInTheDocument();
-    expect(screen.getByTitle('Expanded (960px)')).toBeInTheDocument();
-
-    // Clicking Wide preset updates width
-    fireEvent.click(screen.getByTitle('Wide (760px)'));
-    const drawerContainer = screen.getByLabelText('Resize AI Panel').parentElement;
-    expect(drawerContainer.style.width).toBe('760px');
 
     // Click Done to return to chat
     fireEvent.click(screen.getByText(/Done & Return to Chat/i));

@@ -11,19 +11,9 @@ import {
   ChevronDown,
   ChevronRight,
   Filter,
-  Maximize2,
-  SlidersHorizontal,
-  GripVertical,
   PanelLeftClose,
   PanelLeftOpen
 } from 'lucide-react';
-
-const GLOBAL_SIZE_PRESETS = [
-  { label: '1×1m', w: 1, h: 1 },
-  { label: '2×2m', w: 2, h: 2 },
-  { label: '3×3m', w: 3, h: 3 },
-  { label: '4×4m', w: 4, h: 4 },
-];
 
 export const Sidebar = () => {
   const { addItem, items, selectedItem, snapCoordinate } = useFarm();
@@ -50,10 +40,6 @@ export const Sidebar = () => {
     return 340;
   });
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
-  const [showPaletteResizeMenu, setShowPaletteResizeMenu] = useState(false);
-
-  // Global Spawn Size / Resize preset state
-  const [globalSpawnSize, setGlobalSpawnSize] = useState({ w: 2, h: 2, label: '2×2m' });
 
   const sidebarRef = useRef(null);
 
@@ -67,7 +53,7 @@ export const Sidebar = () => {
     if (!isResizingSidebar) return;
 
     const handleMouseMove = (e) => {
-      // Calculate new width clamped between 260px and 540px
+      // Clamped between 260px and 540px
       const newWidth = Math.min(540, Math.max(260, e.clientX));
       setPaletteWidth(newWidth);
     };
@@ -232,116 +218,9 @@ export const Sidebar = () => {
             </button>
           </div>
 
-          <div className="flex items-center space-x-1.5">
-            {/* Palette width preset buttons: Compact (270px), Standard (340px), Expanded (440px) */}
-            <div className="flex items-center bg-stone-900 border border-stone-800 rounded-lg p-0.5 text-[10px] font-mono">
-              <button
-                type="button"
-                onClick={() => setPaletteWidth(270)}
-                title="Compact (270px)"
-                className={`px-1.5 py-0.5 rounded transition-all ${
-                  paletteWidth === 270
-                    ? 'bg-amber-600 text-stone-950 font-bold'
-                    : 'text-stone-400 hover:text-amber-200'
-                }`}
-              >
-                S
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaletteWidth(340)}
-                title="Standard (340px)"
-                className={`px-1.5 py-0.5 rounded transition-all ${
-                  paletteWidth === 340
-                    ? 'bg-amber-600 text-stone-950 font-bold'
-                    : 'text-stone-400 hover:text-amber-200'
-                }`}
-              >
-                M
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaletteWidth(440)}
-                title="Expanded (440px)"
-                className={`px-1.5 py-0.5 rounded transition-all ${
-                  paletteWidth === 440
-                    ? 'bg-amber-600 text-stone-950 font-bold'
-                    : 'text-stone-400 hover:text-amber-200'
-                }`}
-              >
-                L
-              </button>
-            </div>
-
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800/60 shadow-sm">
-              {filteredItems.length}
-            </span>
-          </div>
-        </div>
-
-        {/* Palette Width Quick Presets Dropdown */}
-        {showPaletteResizeMenu && (
-          <div className="p-2.5 rounded-xl bg-stone-900 border border-amber-700/60 space-y-2 text-xs animate-in fade-in duration-150">
-            <div className="flex items-center justify-between text-[11px] text-stone-300 font-semibold">
-              <span>Resize Palette Width:</span>
-              <span className="font-mono text-amber-400">{paletteWidth}px</span>
-            </div>
-            <div className="grid grid-cols-3 gap-1.5 text-center font-mono text-[10px]">
-              {[
-                { label: 'Compact', width: 280 },
-                { label: 'Standard', width: 340 },
-                { label: 'Wide', width: 460 },
-              ].map((w) => (
-                <button
-                  key={w.label}
-                  type="button"
-                  onClick={() => {
-                    setPaletteWidth(w.width);
-                    setShowPaletteResizeMenu(false);
-                  }}
-                  className={`py-1.5 rounded-lg border transition-all ${
-                    paletteWidth === w.width
-                      ? 'bg-amber-600 text-stone-950 font-bold border-amber-500'
-                      : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-200'
-                  }`}
-                >
-                  <div>{w.label}</div>
-                  <div className="text-[9px] text-stone-500">{w.width}px</div>
-                </button>
-              ))}
-            </div>
-            <p className="text-[9px] text-stone-500 text-center font-sans">
-              Tip: You can also drag the right border edge to resize freely.
-            </p>
-          </div>
-        )}
-
-        {/* Global Plot Spawn Size / Resize Selector */}
-        <div className="p-2 rounded-xl bg-stone-900/60 border border-stone-800 flex items-center justify-between text-[10px] font-mono">
-          <span className="text-stone-400 font-sans flex items-center space-x-1">
-            <SlidersHorizontal className="w-3 h-3 text-amber-400" />
-            <span>Plot Size:</span>
+          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800/60 shadow-sm font-semibold">
+            {filteredItems.length} Elements
           </span>
-          <div className="flex items-center space-x-1">
-            {GLOBAL_SIZE_PRESETS.map((p) => {
-              const isSelected = globalSpawnSize.label === p.label;
-              return (
-                <button
-                  key={p.label}
-                  type="button"
-                  onClick={() => setGlobalSpawnSize(p)}
-                  title={`Set default spawn dimension to ${p.label}`}
-                  className={`px-2 py-0.5 rounded transition-all ${
-                    isSelected
-                      ? 'bg-amber-600 text-stone-950 font-bold'
-                      : 'bg-stone-950 text-stone-400 hover:text-stone-200 border border-stone-800'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {/* Search Bar */}
@@ -395,7 +274,7 @@ export const Sidebar = () => {
           </div>
         ) : (
           categoriesToDisplay.map((catGroup) => {
-            const isCollapsed = Boolean(collapsedCategories[catGroup.name]);
+            const isCategoryCollapsed = Boolean(collapsedCategories[catGroup.name]);
             return (
               <div key={catGroup.name} className="space-y-2">
                 {/* Category Header Accordion */}
@@ -405,7 +284,7 @@ export const Sidebar = () => {
                   className="w-full flex items-center justify-between py-1 px-1.5 text-left rounded-lg hover:bg-stone-900/60 transition-colors"
                 >
                   <div className="flex items-center space-x-2">
-                    {isCollapsed ? (
+                    {isCategoryCollapsed ? (
                       <ChevronRight className="w-3.5 h-3.5 text-stone-500" />
                     ) : (
                       <ChevronDown className="w-3.5 h-3.5 text-amber-400" />
@@ -420,14 +299,13 @@ export const Sidebar = () => {
                 </button>
 
                 {/* Cards in this Category */}
-                {!isCollapsed && (
+                {!isCategoryCollapsed && (
                   <div className="space-y-2 pl-0.5">
                     {catGroup.items.map((item) => (
                       <PaletteCard
                         key={item.type}
                         itemDef={item}
                         onQuickAdd={handleQuickAdd}
-                        globalSize={globalSpawnSize}
                       />
                     ))}
                   </div>
@@ -446,13 +324,13 @@ export const Sidebar = () => {
         </div>
         <div className="flex items-start space-x-2">
           <Sparkles className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
-          <span>Click placed plots to open the Object Inspector.</span>
+          <span>Point icons (Trees, Wells) have fixed 2m×2m footprint.</span>
         </div>
 
         {selectedItem && (
-          <div className="mt-2 pt-2 border-t border-stone-800 flex items-center justify-between font-mono text-[10px] text-amber-300">
-            <span className="truncate">Selected Plot</span>
-            <span className="font-bold text-emerald-300 capitalize">{selectedItem.type}</span>
+          <div className="mt-2 pt-2 border-t border-stone-800 flex items-center justify-between text-amber-300 font-mono text-[10px]">
+            <span>Selected: {selectedItem.type}</span>
+            <span>{selectedItem.x}m, {selectedItem.y}m</span>
           </div>
         )}
       </div>

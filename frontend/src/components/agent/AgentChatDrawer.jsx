@@ -25,8 +25,6 @@ import {
   CornerDownLeft,
   ArrowRight,
   GripVertical,
-  Maximize2,
-  Minimize2,
   PanelRightClose
 } from 'lucide-react';
 import { apiClient } from '../../api/apiClient';
@@ -36,12 +34,6 @@ import { ScenarioComparisonModal } from '../simulation/ScenarioComparisonModal';
 const DEFAULT_PANEL_WIDTH = 540;
 const MIN_PANEL_WIDTH = 380;
 const MAX_PANEL_WIDTH = 1150;
-
-const AI_PANEL_PRESETS = [
-  { label: 'Standard', width: 540, title: 'Standard (540px)' },
-  { label: 'Wide', width: 760, title: 'Wide (760px)' },
-  { label: 'Expanded', width: 960, title: 'Expanded (960px)' },
-];
 
 const PRESET_SCENARIOS = [
   {
@@ -612,45 +604,10 @@ export const AgentChatDrawer = ({ isOpen, onClose }) => {
                   <ChevronDown className="w-2.5 h-2.5 text-emerald-400/80 group-hover:translate-y-0.5 transition-transform" />
                 </button>
               </div>
-              <p className="text-[11px] text-stone-400 mt-0.5 font-sans">
-                {showConfig ? 'Select neural weights, cloud engines, and API keys' : `Autonomous Digital Twin Advisor • ${farmName || 'GreenTwin Farm'}`}
-              </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-1">
-            {/* Quick Size Presets */}
-            <div className="hidden sm:flex items-center space-x-0.5 bg-stone-900/90 rounded-lg p-0.5 border border-white/[0.08] mr-1">
-              {AI_PANEL_PRESETS.map((p) => {
-                const isSelected = Math.abs(panelWidth - p.width) < 25;
-                return (
-                  <button
-                    key={p.label}
-                    type="button"
-                    onClick={() => setPanelWidth(p.width)}
-                    className={`px-2 py-1 rounded text-[10px] font-mono transition-all ${
-                      isSelected
-                        ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm'
-                        : 'text-stone-400 hover:text-stone-200 border border-transparent'
-                    }`}
-                    title={p.title}
-                  >
-                    {p.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Quick Expand / Standard Toggle */}
-            <button
-              type="button"
-              onClick={() => setPanelWidth(panelWidth >= 740 ? DEFAULT_PANEL_WIDTH : 780)}
-              className="p-2 rounded-xl text-stone-400 hover:text-stone-100 hover:bg-white/[0.06] transition-all hidden sm:flex"
-              title={panelWidth >= 740 ? 'Restore standard width (540px)' : 'Expand to wide view (780px)'}
-              aria-label="Toggle width"
-            >
-              {panelWidth >= 740 ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </button>
 
             <button
               onClick={() => setShowConfig(!showConfig)}

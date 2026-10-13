@@ -2,6 +2,19 @@
 
 > **An interactive digital twin and autonomous AI agronomic decision engine that bridges agricultural physics, soil hydrodynamics, and local neural intelligence to help farmers optimize crop yields, water use, and climate resilience.**
 
+<p align="center">
+  <img src="intentional_ai_panel.png" alt="GreenTwin Digital Twin Farm Decision Engine — 2D Farm Grid Canvas & AI Agronomist Simulation Panel" width="100%" />
+</p>
+
+---
+
+## 📸 Interface & Live Digital Twin Showcase
+
+| 🌾 2D Spatial Farm Canvas & Simulation Panel | 🤖 Interactive AI Agronomist Deliberation |
+| :---: | :---: |
+| [![GreenTwin Farm Canvas](intentional_ai_panel.png)](intentional_ai_panel.png) | [![GreenTwin AI Agronomist Dialogue](intentional_ai_chat.png)](intentional_ai_chat.png) |
+| *Clean categorized Farm Palette (40px/m scale) with one-click environmental stress simulations (drought, waterlogging, heatwave)* | *Autonomous multi-step AI deliberation grounded in FAO-56 Penman-Monteith physics & Farm Plot Memory* |
+
 ---
 
 ## 1. The Core Idea: What Is DTFDE & How Does It Work?
@@ -107,6 +120,7 @@ $$\text{OpenAI} \longrightarrow \text{Google Gemini} \longrightarrow \text{Local
 ```text
 DTFDE/
 ├── artifact/                                 # Central architectural documentation & reports
+│   ├── pipeline_10_prompts_test_report.md    # 10 detailed agricultural decision prompts & AI pipeline benchmark
 │   ├── system_flowchart.md                   # Visual Mermaid & selectable ASCII system flowcharts
 │   └── llama32_farmer_prompts_and_chrome_tests.md # Real farmer prompts, FAO-56 validation & Chrome test logs
 ├── backend/                                  # Python FastAPI Simulation & AI Backend
@@ -117,6 +131,8 @@ DTFDE/
 │   │   ├── simulation/                       # Physical world models, FAO-56 Penman-Monteith, sandbox
 │   │   ├── storage/                          # Session store and SQLite snapshot persistence
 │   │   └── config.py                         # Environment and application settings
+│   ├── artifact/                             # Backend artifact directory
+│   │   └── pipeline_10_prompts_test_report.md # 10 detailed grower prompts benchmark & AI test report
 │   ├── tests/                                # Pytest test suite (plot memory, sandbox, API)
 │   └── requirements.txt                      # Python dependencies
 ├── frontend/                                 # React / Vite Web Application
@@ -124,12 +140,14 @@ DTFDE/
 │   │   ├── components/
 │   │   │   ├── agent/                        # AI Agronomist Chat Drawer, formatted markdown renderer
 │   │   │   ├── canvas/                       # 2D Farm Grid Canvas (40px/m scale)
-│   │   │   ├── palette/                      # Farm elements palette (crops, trees, water, structures)
+│   │   │   ├── palette/                      # Clean farm elements palette (crops, trees, water, structures)
 │   │   │   └── simulation/                   # Scenario comparison modals & preset controls
 │   │   ├── context/                          # Farm state and active simulation React contexts
 │   │   └── hooks/                            # Custom React hooks (useFarm)
 │   ├── package.json                          # Frontend dependencies
 │   └── vite.config.js                        # Vite build configuration
+├── intentional_ai_panel.png                  # Live UI screenshot: 2D Spatial Canvas & AI Simulation Panel
+├── intentional_ai_chat.png                   # Live UI screenshot: Interactive AI Agronomist Dialogue
 ├── chrome_test_screenshot.png                # Live Chrome browser test validation screenshot
 └── README.md                                 # This file
 ```
